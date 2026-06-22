@@ -1,6 +1,5 @@
 import {
-  SignedIn,
-  SignedOut,
+  Show,
   SignInButton,
   SignUpButton,
   UserButton,
@@ -27,7 +26,7 @@ export function AppHeader({ badge }: { badge?: string }) {
             </span>
           )}
 
-          <SignedOut>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <button
                 type="button"
@@ -44,9 +43,9 @@ export function AppHeader({ badge }: { badge?: string }) {
                 Sign Up
               </button>
             </SignUpButton>
-          </SignedOut>
+          </Show>
 
-          <SignedIn>
+          <Show when="signed-in">
             <Link
               href="/projects"
               className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
@@ -72,14 +71,13 @@ export function AppHeader({ badge }: { badge?: string }) {
               Enterprise
             </Link>
             <UserButton
-              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: "h-9 w-9",
                 },
               }}
             />
-          </SignedIn>
+          </Show>
         </div>
       </div>
     </header>

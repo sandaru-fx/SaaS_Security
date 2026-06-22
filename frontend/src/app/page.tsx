@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { Show } from "@clerk/nextjs";
 
 import { AppHeader } from "@/components/AppHeader";
 import { PricingCards } from "@/components/PricingCards";
@@ -39,22 +39,22 @@ export default async function Home() {
           </div>
 
           <div className="mt-10 flex flex-wrap gap-4">
-            <SignedIn>
+            <Show when="signed-in">
               <Link
                 href="/dashboard"
                 className="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
               >
                 Go to Dashboard →
               </Link>
-            </SignedIn>
-            <SignedOut>
+            </Show>
+            <Show when="signed-out">
               <Link
                 href="/sign-up"
                 className="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
               >
                 Start Free — 2 Audits/Month
               </Link>
-            </SignedOut>
+            </Show>
             <Link
               href="#pricing"
               className="rounded-lg border border-zinc-700 px-6 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-500"
