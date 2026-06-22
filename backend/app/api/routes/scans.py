@@ -10,12 +10,13 @@ from app.database import get_db
 from app.models.issue import Issue
 from app.models.user import User
 from app.schemas.scan import (
+    AuditReportResponse,
     IssueListResponse,
     IssueResponse,
     ScanListResponse,
     ScanResponse,
 )
-from app.services import project_service, scan_service
+from app.services import audit_report, project_service, scan_service
 
 router = APIRouter(tags=["scans"])
 
@@ -32,6 +33,13 @@ def _to_scan_response(scan) -> ScanResponse:
         high_count=scan.high_count,
         medium_count=scan.medium_count,
         low_count=scan.low_count,
+        health_score=scan.health_score,
+        security_score=scan.security_score,
+        architecture_score=scan.architecture_score,
+        performance_score=scan.performance_score,
+        quality_score=scan.quality_score,
+        devops_score=scan.devops_score,
+        grade=scan.grade,
         error_message=scan.error_message,
         started_at=scan.started_at,
         completed_at=scan.completed_at,
@@ -113,7 +121,21 @@ async def list_scan_issues(
 
     result = await db.execute(query)
     issues = list(result.scalars().all())
+    from app.services.report_service import sort_issues_by_priority
+    issues = sort_issues_by_priority(issues)
     return IssueListResponse(
-        issues=[IssueResponse.model_validate(i) for i in issues],
+        issues=[audit_report.issue_to_response(i) for i in issues],
         total=len(issues),
     )
+
+
+@router.get("/scans/{scan_id}/report", response_model=AuditReportResponse)
+async def get_audit_report(
+    scan_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AuditReportResponse:
+    scan = await scan_service.get_scan(db, current_user.id, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    return await audit_report.build_audit_report(db, scan)

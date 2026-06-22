@@ -1,0 +1,102 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.issue import Issue
+from app.models.scan import Scan
+from app.schemas.scan import (
+    AuditReportResponse,
+    CategoryScoreResponse,
+    IssueResponse,
+)
+from app.services.report_service import (
+    apply_scores_to_scan,
+    calculate_category_scores,
+    calculate_overall_score,
+    generate_executive_summary,
+    generate_fix_plan,
+    issue_priority,
+    map_issue_category,
+    score_to_grade,
+    sort_issues_by_priority,
+)
+
+
+def issue_to_response(issue: Issue) -> IssueResponse:
+    return IssueResponse(
+        id=issue.id,
+        scan_id=issue.scan_id,
+        category=issue.category,
+        severity=issue.severity,
+        title=issue.title,
+        description=issue.description,
+        impact=issue.impact,
+        fix_recommendation=issue.fix_recommendation,
+        file_path=issue.file_path,
+        line_start=issue.line_start,
+        line_end=issue.line_end,
+        rule_id=issue.rule_id,
+        scanner=issue.scanner,
+        confidence=issue.confidence,
+        priority=issue_priority(issue),
+        report_category=map_issue_category(issue.category),
+        created_at=issue.created_at,
+    )
+
+
+async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportResponse:
+    result = await db.execute(select(Issue).where(Issue.scan_id == scan.id))
+    issues = list(result.scalars().all())
+
+    if scan.health_score is None and issues:
+        apply_scores_to_scan(scan, issues)
+        await db.commit()
+        await db.refresh(scan)
+
+    categories = calculate_category_scores(issues)
+    overall = (
+        scan.health_score
+        if scan.health_score is not None
+        else calculate_overall_score(categories)
+    )
+    grade = scan.grade or score_to_grade(overall)
+
+    top_issues = sort_issues_by_priority(issues)[:10]
+    fix_targets = [i for i in issues if i.severity in ("critical", "high")][:5]
+    estimated = _estimate_score_after_fixes(issues, fix_targets)
+
+    return AuditReportResponse(
+        scan_id=scan.id,
+        project_id=scan.project_id,
+        status=scan.status,
+        overall_score=overall,
+        grade=grade,
+        categories=[
+            CategoryScoreResponse(
+                category=c.category,
+                score=getattr(scan, f"{c.category}_score", None) or c.score,
+                issue_count=c.issue_count,
+            )
+            for c in categories
+        ],
+        severity_breakdown={
+            "critical": scan.critical_count,
+            "high": scan.high_count,
+            "medium": scan.medium_count,
+            "low": scan.low_count,
+        },
+        executive_summary=generate_executive_summary(overall, grade, scan),
+        fix_plan=generate_fix_plan(issues),
+        top_priority_issues=[issue_to_response(i) for i in top_issues],
+        production_ready=overall >= 80 and scan.critical_count == 0,
+        estimated_score_if_top_fixed=estimated,
+    )
+
+
+def _estimate_score_after_fixes(all_issues: list[Issue], to_fix: list[Issue]) -> int | None:
+    if not to_fix:
+        return None
+
+    fix_ids = {issue.id for issue in to_fix}
+    remaining = [issue for issue in all_issues if issue.id not in fix_ids]
+    categories = calculate_category_scores(remaining)
+    return calculate_overall_score(categories)

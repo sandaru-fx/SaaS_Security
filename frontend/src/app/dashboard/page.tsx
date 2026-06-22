@@ -6,14 +6,14 @@ import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { ProjectCard } from "@/components/ProjectCard";
-import { ApiProject, ApiUser, getCurrentUser, listProjects } from "@/lib/api";
+import { ApiProject, ApiScan, ApiUser, getCurrentUser, listProjects, listScans } from "@/lib/api";
 
 export default function DashboardPage() {
   const { getToken } = useAuth();
   const { user } = useUser();
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [projects, setProjects] = useState<ApiProject[]>([]);
-  const [projectTotal, setProjectTotal] = useState(0);
+  const [latestScore, setLatestScore] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +32,26 @@ export default function DashboardPage() {
         setApiUser(userData);
         setProjects(projectData.projects.slice(0, 3));
         setProjectTotal(projectData.total);
+
+        let bestScore: number | null = null;
+        for (const project of projectData.projects) {
+          if (project.status !== "ready") continue;
+          try {
+            const scanData = await listScans(token, project.id);
+            const completed = scanData.scans.find(
+              (s: ApiScan) => s.status === "completed" && s.health_score != null,
+            );
+            if (completed?.health_score != null) {
+              bestScore =
+                bestScore == null
+                  ? completed.health_score
+                  : Math.max(bestScore, completed.health_score);
+            }
+          } catch {
+            // ignore per-project scan errors on dashboard
+          }
+        }
+        setLatestScore(bestScore);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
@@ -52,7 +72,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 3 — Projects" />
+      <AppHeader badge="Phase 5 — Reports" />
 
       <main className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -75,7 +95,11 @@ export default function DashboardPage() {
         <div className="grid gap-6 md:grid-cols-3">
           <StatCard label="Projects" value={String(projectTotal)} hint="Total projects" />
           <StatCard label="Ready" value={String(readyProjects)} hint="Ready to audit" />
-          <StatCard label="Health Score" value="—" hint="Phase 5" />
+          <StatCard
+            label="Health Score"
+            value={latestScore != null ? String(latestScore) : "—"}
+            hint={latestScore != null ? "Best project score" : "Run an audit"}
+          />
         </div>
 
         {loading && <p className="mt-8 text-zinc-400">Loading dashboard...</p>}

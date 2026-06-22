@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ScanStatus(str, Enum):
@@ -29,6 +29,13 @@ class ScanResponse(BaseModel):
     high_count: int
     medium_count: int
     low_count: int
+    health_score: int | None = None
+    security_score: int | None = None
+    architecture_score: int | None = None
+    performance_score: int | None = None
+    quality_score: int | None = None
+    devops_score: int | None = None
+    grade: str | None = None
     error_message: str | None
     started_at: datetime | None
     completed_at: datetime | None
@@ -57,6 +64,8 @@ class IssueResponse(BaseModel):
     rule_id: str
     scanner: str
     confidence: str
+    priority: int | None = None
+    report_category: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -65,3 +74,27 @@ class IssueResponse(BaseModel):
 class IssueListResponse(BaseModel):
     issues: list[IssueResponse]
     total: int
+
+
+class CategoryScoreResponse(BaseModel):
+    category: str
+    score: int
+    issue_count: int
+
+
+class AuditReportResponse(BaseModel):
+    scan_id: UUID
+    project_id: UUID
+    status: ScanStatus
+    overall_score: int
+    grade: str
+    categories: list[CategoryScoreResponse]
+    severity_breakdown: dict[str, int]
+    executive_summary: str
+    fix_plan: list[str]
+    top_priority_issues: list[IssueResponse]
+    production_ready: bool
+    estimated_score_if_top_fixed: int | None = Field(
+        default=None,
+        description="Estimated score if top 5 critical/high issues are resolved",
+    )

@@ -48,6 +48,15 @@ SaaS_2/
 - [x] Scan & Issue database tables
 - [x] Scan results UI with severity filters
 
+### Phase 5 — Report & Health Score
+- [x] Health score algorithm (0–100) with grade
+- [x] Category breakdown (Security, Architecture, Performance, Quality, DevOps)
+- [x] Executive summary generation
+- [x] Priority-ordered fix plan
+- [x] Production-ready assessment
+- [x] Professional audit report UI with score ring
+- [x] Issue detail modal (Problem → Impact → Fix)
+
 ## Prerequisites
 
 - **Node.js** 18+
@@ -144,6 +153,7 @@ SaaS_2/
 | `GET /api/projects/{id}/scans` | Yes | List project scans |
 | `GET /api/scans/{id}` | Yes | Get scan status |
 | `GET /api/scans/{id}/issues` | Yes | List scan issues |
+| `GET /api/scans/{id}/report` | Yes | Full audit report + health score |
 | `GET /docs` | No | Swagger UI |
 
 ## Frontend Routes
@@ -168,7 +178,7 @@ SaaS_2/
 | 02 | Auth & Users | ✅ Done |
 | 03 | Projects & Repo | ✅ Done |
 | 04 | Scan Engine | ✅ Done |
-| 05 | Report & Score | Pending |
+| 05 | Report & Score | ✅ Done |
 | 06 | AI Layer | Pending |
 | 07 | Extended Scans | Pending |
 | 08 | Dashboard | Pending |

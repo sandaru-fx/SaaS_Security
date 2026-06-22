@@ -6,10 +6,21 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CategoryBreakdown } from "@/components/CategoryBreakdown";
+import { HealthScoreRing } from "@/components/HealthScoreRing";
 import { IssueCard } from "@/components/IssueCard";
-import { ApiIssue, ApiScan, getScan, listScanIssues } from "@/lib/api";
+import { IssueDetailModal } from "@/components/IssueDetailModal";
+import {
+  ApiIssue,
+  ApiScan,
+  AuditReport,
+  getAuditReport,
+  getScan,
+  listScanIssues,
+} from "@/lib/api";
 
 const severityFilters = ["all", "critical", "high", "medium", "low"] as const;
+const categoryFilters = ["all", "security", "secrets", "dependencies"] as const;
 
 export default function ScanResultsPage() {
   const { getToken } = useAuth();
@@ -18,8 +29,13 @@ export default function ScanResultsPage() {
   const scanId = params.scanId as string;
 
   const [scan, setScan] = useState<ApiScan | null>(null);
+  const [report, setReport] = useState<AuditReport | null>(null);
   const [issues, setIssues] = useState<ApiIssue[]>([]);
-  const [filter, setFilter] = useState<(typeof severityFilters)[number]>("all");
+  const [severityFilter, setSeverityFilter] =
+    useState<(typeof severityFilters)[number]>("all");
+  const [categoryFilter, setCategoryFilter] =
+    useState<(typeof categoryFilters)[number]>("all");
+  const [selectedIssue, setSelectedIssue] = useState<ApiIssue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +46,20 @@ export default function ScanResultsPage() {
 
       const [scanData, issueData] = await Promise.all([
         getScan(token, scanId),
-        listScanIssues(token, scanId, filter === "all" ? undefined : { severity: filter }),
+        listScanIssues(token, scanId, {
+          severity: severityFilter === "all" ? undefined : severityFilter,
+          category: categoryFilter === "all" ? undefined : categoryFilter,
+        }),
       ]);
 
       setScan(scanData);
       setIssues(issueData.issues);
       setError(null);
+
+      if (scanData.status === "completed") {
+        const reportData = await getAuditReport(token, scanId);
+        setReport(reportData);
+      }
 
       if (scanData.status === "queued" || scanData.status === "running") {
         return false;
@@ -47,7 +71,7 @@ export default function ScanResultsPage() {
     } finally {
       setLoading(false);
     }
-  }, [getToken, scanId, filter]);
+  }, [getToken, scanId, severityFilter, categoryFilter]);
 
   useEffect(() => {
     let active = true;
@@ -77,9 +101,9 @@ export default function ScanResultsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Scan Results" />
+      <AppHeader badge="Phase 5 — Report" />
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
+      <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
           href={`/projects/${projectId}`}
           className="text-sm text-zinc-500 hover:text-zinc-300"
@@ -87,7 +111,7 @@ export default function ScanResultsPage() {
           ← Back to Project
         </Link>
 
-        {loading && !scan && <p className="mt-8 text-zinc-400">Loading scan...</p>}
+        {loading && !scan && <p className="mt-8 text-zinc-400">Loading audit report...</p>}
         {error && (
           <p className="mt-8 rounded-lg border border-red-900 bg-red-950/50 p-4 text-sm text-red-300">
             {error}
@@ -98,7 +122,10 @@ export default function ScanResultsPage() {
           <>
             <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Audit Results</h1>
+                <p className="text-xs font-medium uppercase tracking-widest text-emerald-400">
+                  Professional Audit Report
+                </p>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight">Audit Results</h1>
                 <p className="mt-2 capitalize text-zinc-400">Status: {scan.status}</p>
               </div>
               {(scan.status === "queued" || scan.status === "running") && (
@@ -109,10 +136,60 @@ export default function ScanResultsPage() {
               )}
             </div>
 
-            {scan.error_message && (
-              <p className="mt-4 rounded-lg border border-red-900 bg-red-950/50 p-4 text-sm text-red-300">
-                {scan.error_message}
-              </p>
+            {report && scan.status === "completed" && (
+              <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
+                <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start">
+                  <HealthScoreRing score={report.overall_score} grade={report.grade} />
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-semibold">Overall Health Score</h2>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          report.production_ready
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-amber-500/20 text-amber-300"
+                        }`}
+                      >
+                        {report.production_ready ? "Production Ready" : "Not Production Ready"}
+                      </span>
+                    </div>
+                    <p className="mt-4 text-sm leading-relaxed text-zinc-300">
+                      {report.executive_summary}
+                    </p>
+                    {report.estimated_score_if_top_fixed != null && (
+                      <p className="mt-3 text-sm text-emerald-400">
+                        Fix top critical/high issues → estimated score{" "}
+                        {report.estimated_score_if_top_fixed}/100
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="mb-4 text-sm font-medium uppercase tracking-widest text-zinc-500">
+                    Category Breakdown
+                  </h3>
+                  <CategoryBreakdown categories={report.categories} />
+                </div>
+
+                {report.fix_plan.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="mb-4 text-sm font-medium uppercase tracking-widest text-zinc-500">
+                      Recommended Fix Order
+                    </h3>
+                    <ol className="space-y-2">
+                      {report.fix_plan.map((step) => (
+                        <li
+                          key={step}
+                          className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-sm text-zinc-300"
+                        >
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </section>
             )}
 
             <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -123,42 +200,47 @@ export default function ScanResultsPage() {
               <CountCard label="Low" value={scan.low_count} color="text-zinc-400" />
             </div>
 
-            {scan.scanners_used.length > 0 && (
-              <p className="mt-4 text-xs text-zinc-500">
-                Scanners: {scan.scanners_used.join(", ")}
-              </p>
-            )}
-
             <div className="mt-8 flex flex-wrap gap-2">
               {severityFilters.map((s) => (
-                <button
+                <FilterButton
                   key={s}
-                  type="button"
-                  onClick={() => setFilter(s)}
-                  className={`rounded-lg px-3 py-1.5 text-sm capitalize transition ${
-                    filter === s
-                      ? "bg-emerald-500 text-zinc-950"
-                      : "border border-zinc-700 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {s}
-                </button>
+                  active={severityFilter === s}
+                  onClick={() => setSeverityFilter(s)}
+                  label={s}
+                />
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {categoryFilters.map((c) => (
+                <FilterButton
+                  key={c}
+                  active={categoryFilter === c}
+                  onClick={() => setCategoryFilter(c)}
+                  label={c}
+                />
               ))}
             </div>
 
             <div className="mt-6 space-y-4">
               {issues.length === 0 && scan.status === "completed" && (
                 <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-8 text-center text-zinc-400">
-                  No issues found — great job!
+                  No issues match your filters.
                 </p>
               )}
               {issues.map((issue) => (
-                <IssueCard key={issue.id} issue={issue} />
+                <IssueCard
+                  key={issue.id}
+                  issue={issue}
+                  onSelect={setSelectedIssue}
+                />
               ))}
             </div>
           </>
         )}
       </main>
+
+      <IssueDetailModal issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
     </div>
   );
 }
@@ -177,5 +259,29 @@ function CountCard({
       <p className="text-xs text-zinc-500">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
     </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-sm capitalize transition ${
+        active
+          ? "bg-emerald-500 text-zinc-950"
+          : "border border-zinc-700 text-zinc-400 hover:text-white"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

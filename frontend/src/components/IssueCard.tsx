@@ -7,19 +7,33 @@ const severityStyles: Record<ApiIssue["severity"], string> = {
   low: "border-zinc-600 bg-zinc-900/50 text-zinc-400",
 };
 
-export function IssueCard({ issue }: { issue: ApiIssue }) {
+type IssueCardProps = {
+  issue: ApiIssue;
+  onSelect?: (issue: ApiIssue) => void;
+};
+
+export function IssueCard({ issue, onSelect }: IssueCardProps) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <button
+      type="button"
+      onClick={() => onSelect?.(issue)}
+      className="w-full rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 text-left transition hover:border-emerald-500/40"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-medium text-zinc-100">{issue.title}</p>
           <p className="mt-1 text-sm text-zinc-400">{issue.description}</p>
         </div>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${severityStyles[issue.severity]}`}
-        >
-          {issue.severity}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${severityStyles[issue.severity]}`}
+          >
+            {issue.severity}
+          </span>
+          {issue.priority != null && (
+            <span className="text-xs text-zinc-500">Priority {issue.priority}</span>
+          )}
+        </div>
       </div>
 
       {issue.file_path && (
@@ -30,16 +44,20 @@ export function IssueCard({ issue }: { issue: ApiIssue }) {
       )}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <InfoBlock label="Impact" value={issue.impact} />
-        <InfoBlock label="How to Fix" value={issue.fix_recommendation} />
+        <InfoBlock label="Business Impact" value={issue.impact} />
+        <InfoBlock label="Recommended Fix" value={issue.fix_recommendation} />
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
         <span className="rounded border border-zinc-800 px-2 py-0.5">{issue.category}</span>
+        {issue.report_category && (
+          <span className="rounded border border-zinc-800 px-2 py-0.5">
+            {issue.report_category}
+          </span>
+        )}
         <span className="rounded border border-zinc-800 px-2 py-0.5">{issue.scanner}</span>
-        <span className="rounded border border-zinc-800 px-2 py-0.5">{issue.rule_id}</span>
       </div>
-    </div>
+    </button>
   );
 }
 

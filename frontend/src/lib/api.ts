@@ -46,6 +46,13 @@ export type ApiScan = {
   high_count: number;
   medium_count: number;
   low_count: number;
+  health_score: number | null;
+  security_score: number | null;
+  architecture_score: number | null;
+  performance_score: number | null;
+  quality_score: number | null;
+  devops_score: number | null;
+  grade: string | null;
   error_message: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -67,7 +74,30 @@ export type ApiIssue = {
   rule_id: string;
   scanner: string;
   confidence: string;
+  priority: number | null;
+  report_category: string | null;
   created_at: string;
+};
+
+export type CategoryScore = {
+  category: string;
+  score: number;
+  issue_count: number;
+};
+
+export type AuditReport = {
+  scan_id: string;
+  project_id: string;
+  status: ScanStatus;
+  overall_score: number;
+  grade: string;
+  categories: CategoryScore[];
+  severity_breakdown: Record<string, number>;
+  executive_summary: string;
+  fix_plan: string[];
+  top_priority_issues: ApiIssue[];
+  production_ready: boolean;
+  estimated_score_if_top_fixed: number | null;
 };
 
 export type ScanListResponse = { scans: ApiScan[]; total: number };
@@ -192,4 +222,8 @@ export async function listScanIssues(
   if (filters?.category) params.set("category", filters.category);
   const qs = params.toString();
   return apiFetch<IssueListResponse>(`/api/scans/${scanId}/issues${qs ? `?${qs}` : ""}`, token);
+}
+
+export async function getAuditReport(token: string, scanId: string): Promise<AuditReport> {
+  return apiFetch<AuditReport>(`/api/scans/${scanId}/report`, token);
 }
