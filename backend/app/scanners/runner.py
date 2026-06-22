@@ -12,6 +12,7 @@ from app.scanners.entropy_secrets import scan_entropy_secrets
 from app.scanners.git_history import scan_git_history
 from app.scanners.graphql_scanner import scan_graphql_static
 from app.scanners.iac_scanner import scan_iac
+from app.scanners.llm_security import scan_llm_security
 from app.scanners.performance import scan_performance
 from app.scanners.quality import scan_quality
 from app.scanners.reachability import annotate_reachability
@@ -117,6 +118,11 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     if ws_static:
         scanners_used.append("websocket-security")
         all_findings.extend(ws_static)
+
+    llm_findings = scan_llm_security(project_dir)
+    if llm_findings:
+        scanners_used.append("llm-security")
+        all_findings.extend(llm_findings)
 
     all_findings = [
         enrich_finding_tags(f) for f in deduplicate_findings(all_findings)

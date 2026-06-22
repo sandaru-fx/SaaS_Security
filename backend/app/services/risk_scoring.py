@@ -243,6 +243,9 @@ def _compute_risk_score(
     elif issue.scanner == "supply-chain":
         score += 10
         factors.append("supply_chain_risk")
+    elif issue.scanner == "llm-security":
+        score += 11
+        factors.append("llm_risk")
     elif internet_exposed and issue.category in ("security", "secrets"):
         score += 4
         factors.append("live_target")
@@ -280,6 +283,18 @@ def _compute_risk_score(
     if issue.rule_id in _CRITICAL_SUPPLY_RULES:
         score += 18
         factors.append("supply_chain_critical")
+
+    _CRITICAL_LLM_RULES = {
+        "llm-output-to-exec",
+        "llm-langchain-python-repl",
+        "llm-langchain-shell-tool",
+        "llm-langchain-dangerous-code",
+        "llm-client-side-openai",
+        "llm-crewai-code-execution",
+    }
+    if issue.rule_id in _CRITICAL_LLM_RULES:
+        score += 20
+        factors.append("llm_critical")
 
     if issue.scanner in ("graphql-security", "websocket-security"):
         score += 6
@@ -322,6 +337,15 @@ def _is_fix_now(score: int, issue: Issue, kev_listed: bool) -> bool:
         "supply-dependency-install-script",
         "supply-typosquat-npm",
         "supply-typosquat-pypi",
+    ):
+        return True
+    if issue.rule_id in (
+        "llm-output-to-exec",
+        "llm-langchain-python-repl",
+        "llm-langchain-shell-tool",
+        "llm-langchain-dangerous-code",
+        "llm-client-side-openai",
+        "llm-crewai-code-execution",
     ):
         return True
     if score >= 75:

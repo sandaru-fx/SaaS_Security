@@ -126,6 +126,11 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             Supply Chain
           </span>
         )}
+        {issue.scanner === "llm-security" && (
+          <span className="rounded border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 font-medium text-fuchsia-300">
+            LLM Security
+          </span>
+        )}
         {issue.validated === "inactive" && (
           <span
             className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"
