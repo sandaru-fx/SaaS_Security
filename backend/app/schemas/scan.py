@@ -79,6 +79,10 @@ class IssueResponse(BaseModel):
     reachable: str | None = None
     reachable_files: str | None = None
     taint_verified: bool = False
+    validated: str | None = None
+    validated_principal: str | None = None
+    validated_method: str | None = None
+    secret_preview: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

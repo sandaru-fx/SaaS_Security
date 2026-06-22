@@ -54,6 +54,10 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         reachable=extra.get("reachable"),
         reachable_files=extra.get("reachable_files"),
         taint_verified=str(extra.get("taint_verified", "")).lower() == "true",
+        validated=extra.get("validated"),
+        validated_principal=extra.get("validated_principal"),
+        validated_method=extra.get("validated_method"),
+        secret_preview=extra.get("secret_preview"),
         created_at=issue.created_at,
     )
 

@@ -85,6 +85,29 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "taint-js-cmd-injection": ("CWE-78", "A03:2021 - Injection"),
     "taint-js-open-redirect": ("CWE-601", "A01:2021 - Broken Access Control"),
     "taint-js-path-traversal": ("CWE-22", "A01:2021 - Broken Access Control"),
+    # New secret rules
+    "github-fine-grained-token": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "slack-bot-token": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "slack-webhook": ("CWE-200", "A05:2021 - Security Misconfiguration"),
+    "discord-webhook": ("CWE-200", "A05:2021 - Security Misconfiguration"),
+    "stripe-secret-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "stripe-restricted-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "sendgrid-api-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "mailgun-api-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "digitalocean-token": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "npm-token": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "openai-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "google-api-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    # Crypto weakness
+    "crypto-md5-for-security": ("CWE-327", "A02:2021 - Cryptographic Failures"),
+    "crypto-sha1-for-security": ("CWE-327", "A02:2021 - Cryptographic Failures"),
+    "crypto-weak-cipher": ("CWE-327", "A02:2021 - Cryptographic Failures"),
+    "crypto-aes-ecb": ("CWE-327", "A02:2021 - Cryptographic Failures"),
+    "crypto-weak-rsa-key": ("CWE-326", "A02:2021 - Cryptographic Failures"),
+    "crypto-jwt-none-alg": ("CWE-347", "A02:2021 - Cryptographic Failures"),
+    "crypto-old-tls": ("CWE-326", "A02:2021 - Cryptographic Failures"),
+    "crypto-bcrypt-low-cost": ("CWE-916", "A02:2021 - Cryptographic Failures"),
+    "crypto-weak-random": ("CWE-338", "A02:2021 - Cryptographic Failures"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

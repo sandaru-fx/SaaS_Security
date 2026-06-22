@@ -44,7 +44,31 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           {issue.taint_verified && <Badge label="Taint verified" tone="violet" />}
           {issue.reachable === "yes" && <Badge label="Reachable" tone="rose" />}
           {issue.reachable === "no" && <Badge label="Not reached" tone="zinc" />}
+          {issue.validated === "active" && <Badge label="VALIDATED ACTIVE" tone="rose" />}
+          {issue.validated === "inactive" && <Badge label="Revoked" tone="zinc" />}
         </div>
+
+        {issue.validated === "active" && (
+          <Section
+            title="Live Secret Validation"
+            content={`This credential is currently ACTIVE on the provider's API${
+              issue.validated_principal ? ` (${issue.validated_principal})` : ""
+            }. Validation: ${issue.validated_method ?? "unknown method"}. Rotate immediately and audit recent usage.`}
+            warn
+          />
+        )}
+        {issue.validated === "inactive" && issue.validated_method && (
+          <Section
+            title="Live Secret Validation"
+            content={`Provider returned 401/403/404 when probed via ${issue.validated_method} — credential appears revoked or invalid. Lower-priority cleanup, but rotate to be safe.`}
+          />
+        )}
+        {issue.secret_preview && (
+          <Section
+            title="Detected Value (masked)"
+            content={issue.secret_preview}
+          />
+        )}
 
         {issue.reachable === "yes" && issue.reachable_files && (
           <Section

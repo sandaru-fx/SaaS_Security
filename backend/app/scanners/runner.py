@@ -3,6 +3,7 @@ from pathlib import Path
 from app.scanners.architecture import scan_architecture
 from app.scanners.bandit_scanner import scan_bandit
 from app.scanners.base import ScanFinding
+from app.scanners.crypto_weakness import scan_crypto
 from app.scanners.cwe_mappings import enrich_finding_tags
 from app.scanners.dedup import deduplicate_findings
 from app.scanners.dependencies import scan_dependencies
@@ -13,6 +14,7 @@ from app.scanners.iac_scanner import scan_iac
 from app.scanners.performance import scan_performance
 from app.scanners.quality import scan_quality
 from app.scanners.reachability import annotate_reachability
+from app.scanners.secret_validator import is_validation_enabled, validate_secret_findings
 from app.scanners.secrets import scan_secrets
 from app.scanners.security import scan_security_patterns
 from app.scanners.semgrep_scanner import scan_semgrep
@@ -27,7 +29,13 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     secret_findings = scan_secrets(project_dir)
     if secret_findings is not None:
         scanners_used.append("secrets")
-        all_findings.extend(secret_findings)
+        validated = validate_secret_findings(secret_findings)
+        if is_validation_enabled() and any(
+            f.metadata.get("validated") and f.metadata["validated"] not in ("skipped", "no_validator", "duplicate")
+            for f in validated
+        ):
+            scanners_used.append("secret-validator")
+        all_findings.extend(validated)
 
     entropy_findings = scan_entropy_secrets(project_dir)
     if entropy_findings:
@@ -86,6 +94,11 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     if iac_findings:
         scanners_used.append("iac")
         all_findings.extend(iac_findings)
+
+    crypto_findings = scan_crypto(project_dir)
+    if crypto_findings:
+        scanners_used.append("crypto-weakness")
+        all_findings.extend(crypto_findings)
 
     all_findings = [
         enrich_finding_tags(f) for f in deduplicate_findings(all_findings)

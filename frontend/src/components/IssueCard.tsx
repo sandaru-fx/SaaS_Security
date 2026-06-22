@@ -83,6 +83,22 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             Not reached (severity reduced)
           </span>
         )}
+        {issue.validated === "active" && (
+          <span
+            className="rounded border border-red-500/50 bg-red-500/10 px-2 py-0.5 font-bold text-red-300"
+            title={issue.validated_method ?? undefined}
+          >
+            VALIDATED ACTIVE
+          </span>
+        )}
+        {issue.validated === "inactive" && (
+          <span
+            className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"
+            title={issue.validated_method ?? undefined}
+          >
+            Revoked / expired
+          </span>
+        )}
       </div>
     </button>
   );
