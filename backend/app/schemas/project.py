@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class SourceType(str, Enum):
     github = "github"
     zip = "zip"
+    website = "website"
 
 
 class ProjectStatus(str, Enum):
@@ -22,6 +23,15 @@ class ProjectCreateGithub(BaseModel):
     repo_url: str = Field(min_length=1, max_length=500)
     branch: str = Field(default="main", min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=2000)
+
+
+class ProjectCreateWebsite(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    website_url: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=2000)
+    ownership_confirmed: bool = Field(
+        description="User confirms they own or have permission to scan this website"
+    )
 
 
 class ProjectUpdate(BaseModel):

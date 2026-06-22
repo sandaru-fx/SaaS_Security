@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.project import (
     ProjectCreateGithub,
+    ProjectCreateWebsite,
     ProjectListResponse,
     ProjectResponse,
     ProjectUpdate,
@@ -38,6 +39,19 @@ async def create_github_project(
 ) -> ProjectResponse:
     try:
         project = await project_service.create_github_project(db, current_user, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.post("/website", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_website_project(
+    payload: ProjectCreateWebsite,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    try:
+        project = await project_service.create_website_project(db, current_user, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return ProjectResponse.model_validate(project)

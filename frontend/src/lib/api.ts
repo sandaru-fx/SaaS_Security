@@ -12,7 +12,7 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip";
+export type SourceType = "github" | "zip" | "website";
 
 export type ApiProject = {
   id: string;
@@ -297,6 +297,21 @@ export async function uploadZipProject(
   return apiFetch<ApiProject>("/api/projects/upload", token, {
     method: "POST",
     body: formData,
+  });
+}
+
+export async function createWebsiteProject(
+  token: string,
+  data: {
+    name: string;
+    website_url: string;
+    description?: string;
+    ownership_confirmed: boolean;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/website", token, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 
