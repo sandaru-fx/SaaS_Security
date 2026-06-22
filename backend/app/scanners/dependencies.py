@@ -132,6 +132,11 @@ def _collect_packages(project_dir: Path) -> list[tuple[str, str, str]]:
     return unique
 
 
+def collect_packages(project_dir: Path) -> list[tuple[str, str, str]]:
+    """Public API for SBOM and dependency analysis."""
+    return _collect_packages(project_dir)
+
+
 def _parse_package_lock(path: Path) -> list[tuple[str, str, str]]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))

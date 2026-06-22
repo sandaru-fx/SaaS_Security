@@ -20,6 +20,7 @@ import {
   SubscriptionInfo,
   dismissIssue,
   downloadAuditPdf,
+  downloadSbom,
   getAuditReport,
   getScan,
   getSubscription,
@@ -56,6 +57,7 @@ export default function ScanResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [sbomLoading, setSbomLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -139,6 +141,26 @@ export default function ScanResultsPage() {
     }
   }
 
+  async function handleDownloadSbom() {
+    setSbomLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const blob = await downloadSbom(token, scanId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `sbom-${scanId}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "SBOM download failed");
+    } finally {
+      setSbomLoading(false);
+    }
+  }
+
   async function handleDismissIssue(issue: ApiIssue) {
     const reason = window.prompt("Reason for dismissing (optional):") ?? undefined;
     try {
@@ -158,7 +180,7 @@ export default function ScanResultsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 10 — Enterprise" />
+      <AppHeader badge="Phase 6 — Advanced" />
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
@@ -200,6 +222,16 @@ export default function ScanResultsPage() {
                     className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50"
                   >
                     {pdfLoading ? "Generating PDF..." : "Download PDF Report"}
+                  </button>
+                )}
+                {scan.status === "completed" && subscription?.features.sbom_export && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadSbom}
+                    disabled={sbomLoading}
+                    className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                  >
+                    {sbomLoading ? "Generating SBOM..." : "Download SBOM (CycloneDX)"}
                   </button>
                 )}
                 {scan.status === "completed" && subscription && !subscription.features.pdf_export && (

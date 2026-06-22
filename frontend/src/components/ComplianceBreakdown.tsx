@@ -6,22 +6,27 @@ const statusStyles: Record<string, string> = {
   pass: "border-emerald-500/40 bg-emerald-950/30 text-emerald-300",
 };
 
+const FRAMEWORK_ORDER = ["PCI-DSS", "GDPR", "SOC2", "HIPAA"] as const;
+
 export function ComplianceBreakdown({ controls }: { controls: ComplianceControl[] }) {
   if (controls.length === 0) return null;
 
-  const pci = controls.filter((c) => c.framework === "PCI-DSS");
-  const gdpr = controls.filter((c) => c.framework === "GDPR");
+  const grouped = FRAMEWORK_ORDER.map((framework) => ({
+    framework,
+    items: controls.filter((c) => c.framework === framework),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
       <h3 className="text-lg font-semibold text-zinc-50">Compliance Mapping</h3>
       <p className="mt-1 text-sm text-zinc-400">
-        Findings mapped to PCI-DSS and GDPR control areas based on CWE and category tags.
+        Findings mapped to PCI-DSS, GDPR, SOC2, and HIPAA controls based on CWE and category tags.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ComplianceGroup title="PCI-DSS" items={pci} />
-        <ComplianceGroup title="GDPR" items={gdpr} />
+        {grouped.map(({ framework, items }) => (
+          <ComplianceGroup key={framework} title={framework} items={items} />
+        ))}
       </div>
     </section>
   );

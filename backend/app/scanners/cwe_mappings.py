@@ -30,6 +30,16 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "no-https": ("CWE-319", "A02:2021 - Cryptographic Failures"),
     "tls-cert-expired": ("CWE-295", "A02:2021 - Cryptographic Failures"),
     "mixed-content": ("CWE-319", "A05:2021 - Security Misconfiguration"),
+    # IaC
+    "tf-open-cidr": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "tf-s3-public-read": ("CWE-732", "A01:2021 - Broken Access Control"),
+    "tf-hardcoded-secret": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "tf-encryption-disabled": ("CWE-311", "A02:2021 - Cryptographic Failures"),
+    "k8s-privileged-container": ("CWE-250", "A05:2021 - Security Misconfiguration"),
+    "k8s-run-as-root": ("CWE-250", "A05:2021 - Security Misconfiguration"),
+    "k8s-host-namespace": ("CWE-653", "A05:2021 - Security Misconfiguration"),
+    "k8s-unpinned-image": ("CWE-1104", "A06:2021 - Vulnerable and Outdated Components"),
+    "k8s-loadbalancer-no-netpol": ("CWE-284", "A01:2021 - Broken Access Control"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

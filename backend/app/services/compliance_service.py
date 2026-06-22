@@ -1,4 +1,4 @@
-"""Map audit findings to compliance frameworks (PCI-DSS, GDPR)."""
+"""Map audit findings to compliance frameworks (PCI-DSS, GDPR, SOC2, HIPAA)."""
 
 from __future__ import annotations
 
@@ -29,6 +29,29 @@ GDPR_CONTROLS: dict[str, tuple[str, str]] = {
     "dependencies": ("Art. 32", "Maintain secure systems handling personal data."),
 }
 
+SOC2_CONTROLS: dict[str, tuple[str, str]] = {
+    "CWE-798": ("CC6.1", "Logical access — protect credentials and secrets."),
+    "CWE-259": ("CC6.1", "Logical access — prevent hardcoded authentication data."),
+    "CWE-319": ("CC6.7", "Transmission security — encrypt data in transit."),
+    "CWE-295": ("CC6.7", "Transmission security — validate TLS certificates."),
+    "CWE-89": ("CC7.1", "System operations — detect and prevent injection flaws."),
+    "CWE-79": ("CC7.1", "System operations — prevent XSS and injection attacks."),
+    "dependencies": ("CC7.1", "Vulnerability management — patch vulnerable components."),
+    "secrets": ("CC6.1", "Protect secret authentication data from unauthorized access."),
+    "security": ("CC7.1", "Monitor and address security vulnerabilities."),
+    "iac": ("CC6.6", "Infrastructure security — secure cloud and container configs."),
+}
+
+HIPAA_CONTROLS: dict[str, tuple[str, str]] = {
+    "CWE-319": ("164.312(e)", "Transmission security — protect ePHI in transit."),
+    "CWE-798": ("164.312(a)", "Access control — safeguard authentication credentials."),
+    "CWE-259": ("164.312(a)", "Access control — no passwords in application code."),
+    "CWE-311": ("164.312(a)", "Access control — encryption of ePHI at rest."),
+    "secrets": ("164.312(a)", "Protect credentials that access systems with ePHI."),
+    "security": ("164.308(a)", "Administrative safeguards — risk analysis and mitigation."),
+    "dependencies": ("164.308(a)", "Address known vulnerabilities in systems handling ePHI."),
+}
+
 
 @dataclass
 class ComplianceFinding:
@@ -41,9 +64,11 @@ class ComplianceFinding:
 
 
 def build_compliance_summary(issues: list[Issue]) -> list[ComplianceFinding]:
-    """Aggregate issues into PCI-DSS and GDPR control status."""
+    """Aggregate issues into PCI-DSS, GDPR, SOC2, and HIPAA control status."""
     pci_counts: dict[str, dict] = {}
     gdpr_counts: dict[str, dict] = {}
+    soc2_counts: dict[str, dict] = {}
+    hipaa_counts: dict[str, dict] = {}
 
     for issue in issues:
         if issue.dismissed:
@@ -56,10 +81,14 @@ def build_compliance_summary(issues: list[Issue]) -> list[ComplianceFinding]:
                 continue
             _accumulate(pci_counts, PCI_CONTROLS, key, issue)
             _accumulate(gdpr_counts, GDPR_CONTROLS, key, issue)
+            _accumulate(soc2_counts, SOC2_CONTROLS, key, issue)
+            _accumulate(hipaa_counts, HIPAA_CONTROLS, key, issue)
 
     findings: list[ComplianceFinding] = []
     findings.extend(_to_findings("PCI-DSS", pci_counts, PCI_CONTROLS))
     findings.extend(_to_findings("GDPR", gdpr_counts, GDPR_CONTROLS))
+    findings.extend(_to_findings("SOC2", soc2_counts, SOC2_CONTROLS))
+    findings.extend(_to_findings("HIPAA", hipaa_counts, HIPAA_CONTROLS))
     return sorted(findings, key=lambda f: (f.framework, f.control_id))
 
 

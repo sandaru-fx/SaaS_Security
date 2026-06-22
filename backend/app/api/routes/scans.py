@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,8 @@ from app.schemas.scan import (
 )
 from app.services import audit_report, project_service, scan_service
 from app.services.pdf_service import generate_audit_pdf
+from app.services.sbom_service import build_cyclonedx_sbom
+from app.services.scan_runner import _resolve_project_dir
 from app.services.subscription_service import has_feature
 
 router = APIRouter(tags=["scans"])
@@ -175,6 +177,57 @@ async def download_audit_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/scans/{scan_id}/sbom")
+async def download_sbom(
+    scan_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    if not has_feature(current_user, "sbom_export"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="SBOM export is a Pro feature. Upgrade your plan to download SBOMs.",
+        )
+
+    scan = await scan_service.get_scan(db, current_user.id, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if scan.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SBOM is available only for completed audits.",
+        )
+
+    project = await project_service.get_user_project(db, current_user.id, scan.project_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.source_type == "website":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SBOM export applies to code projects with dependency lockfiles.",
+        )
+    if not project.storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project source files are not available for SBOM generation.",
+        )
+
+    project_dir = _resolve_project_dir(project.storage_path)
+    if not project_dir.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project directory not found on disk.",
+        )
+
+    sbom = build_cyclonedx_sbom(project_dir, project.name)
+    filename = f"sbom-{scan_id}.json"
+    return JSONResponse(
+        content=sbom,
+        media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

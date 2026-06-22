@@ -204,10 +204,23 @@ export type ScanCompareResult = {
   low_delta: number;
   category_deltas: Record<string, number | null>;
   improved: boolean;
+  fixed_count: number;
+  new_count: number;
+  recurring_count: number;
+  fixed_issues: RemediationItem[];
+  new_issues: RemediationItem[];
+};
+
+export type RemediationItem = {
+  title: string;
+  severity: IssueSeverity;
+  rule_id: string;
+  file_path: string | null;
 };
 
 export type PlanFeatures = {
   pdf_export: boolean;
+  sbom_export: boolean;
   deep_audit: boolean;
   private_repos: boolean;
   unlimited_scans: boolean;
@@ -495,6 +508,18 @@ export async function downloadAuditPdf(token: string, scanId: string): Promise<B
     const error = await response.json().catch(() => ({ detail: "PDF download failed" }));
     const detail = error.detail;
     throw new Error(typeof detail === "string" ? detail : "PDF download failed");
+  }
+  return response.blob();
+}
+
+export async function downloadSbom(token: string, scanId: string): Promise<Blob> {
+  const response = await fetch(`${API_URL}/api/scans/${scanId}/sbom`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "SBOM download failed" }));
+    const detail = error.detail;
+    throw new Error(typeof detail === "string" ? detail : "SBOM download failed");
   }
   return response.blob();
 }

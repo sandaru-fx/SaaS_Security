@@ -9,6 +9,7 @@ from app.scanners.dependencies import scan_dependencies
 from app.scanners.devops import scan_devops
 from app.scanners.entropy_secrets import scan_entropy_secrets
 from app.scanners.git_history import scan_git_history
+from app.scanners.iac_scanner import scan_iac
 from app.scanners.performance import scan_performance
 from app.scanners.quality import scan_quality
 from app.scanners.secrets import scan_secrets
@@ -70,6 +71,11 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     devops_findings = scan_devops(project_dir)
     scanners_used.append("devops")
     all_findings.extend(devops_findings)
+
+    iac_findings = scan_iac(project_dir)
+    if iac_findings:
+        scanners_used.append("iac")
+        all_findings.extend(iac_findings)
 
     all_findings = [
         enrich_finding_tags(f) for f in deduplicate_findings(all_findings)
