@@ -31,7 +31,22 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             {issue.severity}
           </span>
           {issue.priority != null && (
-            <span className="text-xs text-zinc-500">Priority {issue.priority}</span>
+            <span className="text-xs text-zinc-500">Risk score {issue.priority}</span>
+          )}
+          {issue.fix_now && (
+            <span className="rounded border border-rose-500/50 bg-rose-500/10 px-2 py-0.5 text-xs font-bold text-rose-300">
+              FIX NOW
+            </span>
+          )}
+          {issue.kev_listed && (
+            <span className="rounded border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-300">
+              CISA KEV
+            </span>
+          )}
+          {issue.epss_score != null && issue.epss_score >= 0.1 && (
+            <span className="rounded border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs text-orange-300">
+              EPSS {(issue.epss_score * 100).toFixed(0)}%
+            </span>
           )}
           {issue.ai_triage_verdict === "likely_false_positive" && (
             <span className="text-xs text-amber-400">Likely false positive</span>

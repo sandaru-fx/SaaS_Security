@@ -111,6 +111,12 @@ export type ApiIssue = {
   validated_principal: string | null;
   validated_method: string | null;
   secret_preview: string | null;
+  risk_score: number | null;
+  epss_score: number | null;
+  kev_listed: boolean;
+  risk_factors: string | null;
+  fix_now: boolean;
+  severity_adjusted: string | null;
   created_at: string;
 };
 
@@ -141,6 +147,9 @@ export type AuditReport = {
   executive_summary: string;
   fix_plan: string[];
   top_priority_issues: ApiIssue[];
+  fix_now_issues: ApiIssue[];
+  fix_now_count: number;
+  max_risk_score: number | null;
   production_ready: boolean;
   estimated_score_if_top_fixed: number | null;
   ai_summary: string | null;

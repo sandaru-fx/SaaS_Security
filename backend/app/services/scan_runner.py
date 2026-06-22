@@ -139,6 +139,12 @@ def execute_scan(scan_id: str) -> None:
         issues = list(session.execute(
             select(Issue).where(Issue.scan_id == scan.id)
         ).scalars().all())
+
+        from app.services.risk_scoring import apply_risk_scores
+
+        apply_risk_scores(issues, project)
+        _recount_severities(scan, issues)
+
         from app.services.report_service import apply_scores_to_scan
         apply_scores_to_scan(scan, issues)
 
@@ -218,6 +224,17 @@ def _fail_scan(session, scan: Scan, message: str) -> None:
     scan.error_message = message
     scan.completed_at = datetime.now(timezone.utc)
     session.commit()
+
+
+def _recount_severities(scan: Scan, issues: list[Issue]) -> None:
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for issue in issues:
+        severity = issue.severity if issue.severity in counts else "medium"
+        counts[severity] = counts.get(severity, 0) + 1
+    scan.critical_count = counts["critical"]
+    scan.high_count = counts["high"]
+    scan.medium_count = counts["medium"]
+    scan.low_count = counts["low"]
 
 
 def _resolve_project_dir(storage_path: str) -> Path:

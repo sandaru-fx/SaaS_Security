@@ -83,6 +83,12 @@ class IssueResponse(BaseModel):
     validated_principal: str | None = None
     validated_method: str | None = None
     secret_preview: str | None = None
+    risk_score: int | None = None
+    epss_score: float | None = None
+    kev_listed: bool = False
+    risk_factors: str | None = None
+    fix_now: bool = False
+    severity_adjusted: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -119,6 +125,9 @@ class AuditReportResponse(BaseModel):
     executive_summary: str
     fix_plan: list[str]
     top_priority_issues: list[IssueResponse]
+    fix_now_issues: list[IssueResponse] = Field(default_factory=list)
+    fix_now_count: int = 0
+    max_risk_score: int | None = None
     production_ready: bool
     estimated_score_if_top_fixed: int | None = Field(
         default=None,

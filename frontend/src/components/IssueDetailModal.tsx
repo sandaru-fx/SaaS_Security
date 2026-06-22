@@ -30,7 +30,15 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge label={issue.severity} />
-          {issue.priority != null && <Badge label={`Priority ${issue.priority}`} />}
+          {issue.priority != null && <Badge label={`Risk ${issue.priority}`} />}
+          {issue.fix_now && <Badge label="FIX NOW" tone="rose" />}
+          {issue.kev_listed && <Badge label="CISA KEV" tone="rose" />}
+          {issue.epss_score != null && issue.epss_score >= 0.1 && (
+            <Badge label={`EPSS ${(issue.epss_score * 100).toFixed(1)}%`} tone="orange" />
+          )}
+          {issue.severity_adjusted && (
+            <Badge label={`Adjusted → ${issue.severity_adjusted}`} warn />
+          )}
           {issue.report_category && <Badge label={issue.report_category} />}
           {issue.ai_triage_verdict && (
             <Badge
@@ -91,6 +99,22 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           />
         )}
 
+        {(issue.risk_score != null || issue.risk_factors) && (
+          <Section
+            title="Risk Scoring v2"
+            content={[
+              issue.risk_score != null ? `Risk score: ${issue.risk_score}/100` : null,
+              issue.epss_score != null ? `EPSS exploit probability: ${(issue.epss_score * 100).toFixed(2)}%` : null,
+              issue.kev_listed ? "Listed in CISA Known Exploited Vulnerabilities (KEV) catalog" : null,
+              issue.fix_now ? "Flagged as FIX NOW — address before next release" : null,
+              issue.risk_factors ? `Signals: ${issue.risk_factors.replace(/,/g, ", ")}` : null,
+            ]
+              .filter(Boolean)
+              .join(". ")}
+            warn={issue.fix_now}
+          />
+        )}
+
         {issue.ai_triage_reason && (
           <Section title="AI Triage" content={issue.ai_triage_reason} warn />
         )}
@@ -107,8 +131,8 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
         <Section
           title="Priority"
           content={`Severity: ${issue.severity.toUpperCase()} · Confidence: ${issue.confidence}${
-            issue.priority != null ? ` · Priority score: ${issue.priority}` : ""
-          }`}
+            issue.priority != null ? ` · Risk score: ${issue.priority}/100` : ""
+          }${issue.severity_adjusted ? ` · Adjusted from scanner severity → ${issue.severity_adjusted}` : ""}`}
         />
 
         {(issue.file_path || issue.rule_id) && (
@@ -171,12 +195,13 @@ function Badge({
 }: {
   label: string;
   warn?: boolean;
-  tone?: "default" | "violet" | "rose" | "zinc";
+  tone?: "default" | "violet" | "rose" | "zinc" | "orange";
 }) {
   let cls = "border-zinc-700 text-zinc-300";
   if (warn) cls = "border-amber-500/40 text-amber-300";
   else if (tone === "violet") cls = "border-violet-500/40 bg-violet-500/10 text-violet-300";
   else if (tone === "rose") cls = "border-rose-500/40 bg-rose-500/10 text-rose-300";
+  else if (tone === "orange") cls = "border-orange-500/40 bg-orange-500/10 text-orange-300";
   else if (tone === "zinc") cls = "border-zinc-700 bg-zinc-800/40 text-zinc-400";
   return (
     <span className={`rounded-full border px-2.5 py-1 text-xs capitalize ${cls}`}>{label}</span>
