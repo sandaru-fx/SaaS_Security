@@ -1,0 +1,50 @@
+# Render Blueprint — backend API
+# Dashboard: https://dashboard.render.com/blueprints → New Blueprint Instance → connect repo
+services:
+  - type: web
+    name: saas-security-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_JWKS_URL
+        sync: false
+      - key: CLERK_JWT_ISSUER
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_TEAM
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+    # Persistent uploads need a paid Render plan:
+    # disk:
+    #   name: auditor-uploads
+    #   mountPath: /app/uploads
+    #   sizeGB: 1
