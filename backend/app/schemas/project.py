@@ -54,6 +54,7 @@ class ProjectCreateWebsite(BaseModel):
         description="User confirms they own or have permission to scan this website"
     )
     active_dast_enabled: bool = Field(default=False)
+    asm_enabled: bool = Field(default=False)
     auth: AuthConfig | None = None
 
 
@@ -64,12 +65,19 @@ class ProjectCreateApi(BaseModel):
     ownership_confirmed: bool = Field(
         description="User confirms they own or have permission to scan this API"
     )
+    asm_enabled: bool = Field(default=False)
     auth: AuthConfig | None = None
 
 
 class ProjectAuthUpdate(BaseModel):
     auth: AuthConfig
     active_dast_enabled: bool | None = None
+    asm_enabled: bool | None = None
+
+
+class ProjectAsmUpdate(BaseModel):
+    enabled: bool
+    root_domain: str | None = Field(default=None, max_length=255)
 
 
 class ProjectCreateLocal(BaseModel):
@@ -99,6 +107,8 @@ class ProjectResponse(BaseModel):
     active_dast_enabled: bool = False
     api_spec_url: str | None = None
     has_auth_configured: bool = False
+    asm_enabled: bool = False
+    asm_root_domain: str | None = None
     created_at: datetime
     updated_at: datetime
 

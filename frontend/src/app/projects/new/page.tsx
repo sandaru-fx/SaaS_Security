@@ -37,6 +37,7 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [activeDastEnabled, setActiveDastEnabled] = useState(false);
+  const [asmEnabled, setAsmEnabled] = useState(false);
   const [apiSpecUrl, setApiSpecUrl] = useState("");
 
   const [authType, setAuthType] = useState<AuthType>("none");
@@ -98,6 +99,7 @@ export default function NewProjectPage() {
           description: description || undefined,
           ownership_confirmed: true,
           active_dast_enabled: activeDastEnabled,
+          asm_enabled: asmEnabled,
           auth: buildAuthConfig(),
         });
         projectId = project.id;
@@ -110,6 +112,7 @@ export default function NewProjectPage() {
           api_spec_url: apiSpecUrl,
           description: description || undefined,
           ownership_confirmed: true,
+          asm_enabled: asmEnabled,
           auth: buildAuthConfig(),
         });
         projectId = project.id;
@@ -330,6 +333,25 @@ export default function NewProjectPage() {
                 </span>
               </label>
 
+              <label className="flex items-start gap-3 rounded-lg border border-violet-500/30 bg-violet-950/20 p-4">
+                <input
+                  type="checkbox"
+                  checked={asmEnabled}
+                  onChange={(e) => setAsmEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-violet-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  <span className="font-semibold text-violet-300">
+                    Enable Attack Surface Management (ASM)
+                  </span>{" "}
+                  — enumerates subdomains via Certificate Transparency logs + DNS, checks
+                  SPF/DMARC hygiene, detects dangling-CNAME subdomain takeovers, expiring or weak
+                  TLS, exposed admin panels (.env, .git, phpMyAdmin, Jenkins, Grafana, Kibana,
+                  Spring Actuator, Swagger). Discovered live hosts are auto-fed into Active DAST.
+                  Domain ownership verification required.
+                </span>
+              </label>
+
               <AuthSection
                 authType={authType}
                 setAuthType={setAuthType}
@@ -377,6 +399,23 @@ export default function NewProjectPage() {
                   security schemes.
                 </p>
               </Field>
+
+              <label className="flex items-start gap-3 rounded-lg border border-violet-500/30 bg-violet-950/20 p-4">
+                <input
+                  type="checkbox"
+                  checked={asmEnabled}
+                  onChange={(e) => setAsmEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-violet-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  <span className="font-semibold text-violet-300">
+                    Enable Attack Surface Management (ASM)
+                  </span>{" "}
+                  — enumerates subdomains via CT logs + DNS, checks SPF/DMARC, detects
+                  subdomain takeover risks and exposed admin panels around the API host. Domain
+                  ownership verification required.
+                </span>
+              </label>
 
               <AuthSection
                 authType={authType}

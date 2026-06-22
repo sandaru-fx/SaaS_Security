@@ -22,6 +22,7 @@ import {
   listScans,
   startScan,
   updateProject,
+  updateProjectAsm,
   updateProjectAuth,
   updateProjectPrChecks,
   verifyDomain,
@@ -262,6 +263,16 @@ export default function ProjectDetailPage() {
                   value={project.has_auth_configured ? "Configured" : "None (public scan)"}
                 />
               )}
+              {liveTarget && (
+                <DetailRow
+                  label="Attack Surface Mgmt"
+                  value={
+                    project.asm_enabled
+                      ? `Enabled (${project.asm_root_domain ?? "auto"})`
+                      : "Disabled"
+                  }
+                />
+              )}
               <DetailRow label="Created" value={new Date(project.created_at).toLocaleString()} />
               {project.status_message && (
                 <DetailRow label="Status Message" value={project.status_message} />
@@ -327,6 +338,15 @@ export default function ProjectDetailPage() {
 
             {liveTarget && (
               <ActiveDastPanel
+                project={project}
+                getToken={getToken}
+                onUpdate={setProject}
+                onError={setError}
+              />
+            )}
+
+            {liveTarget && (
+              <AsmPanel
                 project={project}
                 getToken={getToken}
                 onUpdate={setProject}
@@ -713,6 +733,110 @@ function ActiveDastPanel({
         {project.has_auth_configured && authType === "none" && !saving && (
           <span className="text-xs text-amber-300">
             Auth currently configured. Select &quot;No authentication&quot; and save to clear it.
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AsmPanel({
+  project,
+  getToken,
+  onUpdate,
+  onError,
+}: {
+  project: ApiProject;
+  getToken: () => Promise<string | null>;
+  onUpdate: (p: ApiProject) => void;
+  onError: (msg: string) => void;
+}) {
+  const [enabled, setEnabled] = useState(project.asm_enabled ?? false);
+  const [rootDomain, setRootDomain] = useState(project.asm_root_domain ?? "");
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  const requiresVerification = enabled && !project.domain_verified;
+
+  async function handleSave() {
+    if (requiresVerification) {
+      onError("Verify domain ownership before enabling ASM.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const jwt = await getToken();
+      if (!jwt) return;
+      const updated = await updateProjectAsm(jwt, project.id, {
+        enabled,
+        root_domain: rootDomain.trim() || null,
+      });
+      onUpdate(updated);
+      setSavedAt(new Date());
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Failed to save ASM settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-xl border border-violet-500/20 bg-violet-950/10 p-6">
+      <h2 className="text-sm font-medium uppercase tracking-widest text-violet-300">
+        Attack Surface Management (Recon Engine)
+      </h2>
+      <p className="mt-2 text-sm text-zinc-400">
+        Discovers your external footprint the way an attacker does:
+      </p>
+      <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-zinc-400">
+        <li>Subdomain enumeration via Certificate Transparency logs + DNS bruteforce</li>
+        <li>SPF / DMARC hygiene + dangling-CNAME subdomain takeover detection</li>
+        <li>TLS certificate expiry + weak protocol (TLS 1.0/1.1) detection</li>
+        <li>Exposed admin panels (.env, .git, phpMyAdmin, Jenkins, Grafana, Kibana, Actuator, Swagger)</li>
+        <li>Tech / CMS fingerprinting (WordPress / Drupal / Joomla version disclosure)</li>
+        <li>Discovered live hosts auto-fed into Active DAST queue (when enabled)</li>
+      </ul>
+
+      <label className="mt-4 flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+          className="h-4 w-4 rounded border-zinc-600"
+        />
+        <span className="text-sm text-zinc-300">Enable ASM Recon on next scan</span>
+      </label>
+
+      <label className="mt-4 block text-sm">
+        <span className="text-zinc-400">
+          Root domain (optional — defaults to the target host)
+        </span>
+        <input
+          type="text"
+          value={rootDomain}
+          onChange={(e) => setRootDomain(e.target.value)}
+          placeholder="example.com"
+          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+        />
+      </label>
+
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || requiresVerification}
+          className="rounded-lg bg-violet-500 px-5 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save ASM Settings"}
+        </button>
+        {requiresVerification && (
+          <span className="text-xs text-amber-300">
+            Verify domain ownership first to enable ASM.
+          </span>
+        )}
+        {savedAt && (
+          <span className="text-xs text-emerald-300">
+            Saved at {savedAt.toLocaleTimeString()}
           </span>
         )}
       </div>
