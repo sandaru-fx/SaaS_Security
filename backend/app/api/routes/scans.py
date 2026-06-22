@@ -13,6 +13,7 @@ from app.models.user import User
 from app.schemas.scan import (
     AuditChatRequest,
     AuditChatResponse,
+    AutofixPrResponse,
     AuditReportResponse,
     IssueListResponse,
     IssueResponse,
@@ -262,3 +263,43 @@ async def chat_with_audit(
         allow_deep_audit=allow_deep,
     )
     return AuditChatResponse(**response)
+
+
+@router.post(
+    "/scans/{scan_id}/issues/{issue_id}/autofix-pr",
+    response_model=AutofixPrResponse,
+)
+async def create_autofix_pull_request(
+    scan_id: UUID,
+    issue_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AutofixPrResponse:
+    if not has_feature(current_user, "private_repos"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Auto-fix PRs require Pro or Team plan.",
+        )
+
+    scan = await scan_service.get_scan(db, current_user.id, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if scan.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Auto-fix is available only for completed audits.",
+        )
+
+    issue = await db.get(Issue, issue_id)
+    if not issue or issue.scan_id != scan.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issue not found")
+
+    from app.services.autofix_service import AutofixError
+    from app.services.github_autofix_service import create_autofix_pr
+
+    try:
+        result = await create_autofix_pr(db, current_user, scan, issue)
+    except AutofixError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return AutofixPrResponse(**result)

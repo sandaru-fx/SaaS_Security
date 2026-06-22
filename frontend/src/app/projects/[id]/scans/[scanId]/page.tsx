@@ -375,8 +375,12 @@ export default function ScanResultsPage() {
 
       <IssueDetailModal
         issue={selectedIssue}
+        scanId={scanId}
         onClose={() => setSelectedIssue(null)}
         onDismiss={handleDismissIssue}
+        onAutofix={(issue, prUrl) =>
+          setSelectedIssue({ ...issue, autofix_pr_url: prUrl })
+        }
       />
     </div>
   );
