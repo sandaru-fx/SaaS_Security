@@ -8,64 +8,89 @@ Monorepo for the AI Software Auditor SaaS platform (Plan 0).
 
 ```
 SaaS_2/
-├── frontend/          # Next.js + TypeScript + Tailwind
-├── backend/           # FastAPI API server
+├── frontend/          # Next.js + TypeScript + Tailwind + Clerk
+├── backend/           # FastAPI API server + JWT auth
 ├── workers/           # Celery background scan workers
 ├── docker-compose.yml # PostgreSQL + Redis + Backend + Worker
 ├── .env.example       # Environment template
 └── README.md
 ```
 
-## Phase 1 — Foundation (Current)
+## Completed Phases
 
+### Phase 1 — Foundation
 - [x] Monorepo structure
 - [x] Next.js frontend
 - [x] FastAPI backend with health endpoints
 - [x] Celery worker skeleton
 - [x] Docker Compose (PostgreSQL, Redis, Backend, Worker)
-- [x] Environment configuration
+
+### Phase 2 — Auth & Users
+- [x] Clerk signup / login / logout
+- [x] Protected routes (dashboard, profile)
+- [x] Backend JWT verification
+- [x] User table sync (`GET /api/users/me`)
+- [x] Profile page with update (`PATCH /api/users/me`)
 
 ## Prerequisites
 
-- **Node.js** 18+ (you have v22)
-- **Python** 3.12+ (you have 3.14)
+- **Node.js** 18+
+- **Python** 3.12+
 - **Docker Desktop** (optional — for PostgreSQL & Redis locally)
+- **Clerk account** (free) — https://dashboard.clerk.com
+
+## Clerk Setup (Required for Phase 2)
+
+1. Create a new application at [Clerk Dashboard](https://dashboard.clerk.com)
+2. Copy your API keys
+3. Update root `.env`:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   CLERK_JWKS_URL=https://YOUR-APP.clerk.accounts.dev/.well-known/jwks.json
+   CLERK_JWT_ISSUER=https://YOUR-APP.clerk.accounts.dev
+   ```
+4. Copy frontend env:
+   ```bash
+   copy frontend\.env.local.example frontend\.env.local
+   ```
+   Paste your `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` into `frontend\.env.local`
+
+> JWKS URL and Issuer are found in Clerk Dashboard → **API Keys** → **Advanced** → JWT template section, or derive from your Clerk frontend API URL.
 
 ## Quick Start
 
 ### Option A — With Docker (recommended)
 
-1. Copy environment file:
+1. Copy environment files:
    ```bash
    copy .env.example .env
+   copy frontend\.env.local.example frontend\.env.local
    ```
+   Fill in Clerk keys in both files.
 
-2. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) if not installed.
-
-3. Start infrastructure + backend + worker:
+2. Start infrastructure + backend + worker:
    ```bash
    docker compose up -d
    ```
 
-4. Start frontend (separate terminal):
+3. Start frontend:
    ```bash
    cd frontend
    npm run dev
    ```
 
-5. Open:
+4. Open:
    - Frontend: http://localhost:3000
+   - Sign up: http://localhost:3000/sign-up
+   - Dashboard: http://localhost:3000/dashboard
    - API docs: http://localhost:8000/docs
-   - Health: http://localhost:8000/api/health
 
-### Option B — Without Docker (frontend + API only)
+### Option B — Without Docker
 
-1. Copy environment file:
-   ```bash
-   copy .env.example .env
-   ```
+1. Copy env files and add Clerk keys (see above)
 
-2. Setup Python environments:
+2. Setup Python:
    ```bash
    npm run setup
    ```
@@ -77,29 +102,40 @@ SaaS_2/
    uvicorn app.main:app --reload --port 8000
    ```
 
-4. Start frontend (new terminal):
+4. Start frontend:
    ```bash
    cd frontend
    npm run dev
    ```
 
-> Without Docker, `/api/health/ready` will show database & Redis as unhealthy — that's expected until you install Docker or run PostgreSQL/Redis manually.
+> Without Docker, user sync to PostgreSQL requires a running database. `/api/health/ready` will show DB as unhealthy until Docker is started.
 
 ## API Endpoints
 
-| Endpoint | Description |
-|---|---|
-| `GET /` | API info |
-| `GET /api/health` | Liveness check |
-| `GET /api/health/ready` | Readiness (DB + Redis) |
-| `GET /docs` | Swagger UI |
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /api/health` | No | Liveness check |
+| `GET /api/health/ready` | No | Readiness (DB + Redis) |
+| `GET /api/users/me` | Yes | Get/sync current user |
+| `PATCH /api/users/me` | Yes | Update profile |
+| `GET /docs` | No | Swagger UI |
+
+## Frontend Routes
+
+| Route | Access | Description |
+|---|---|---|
+| `/` | Public | Landing page |
+| `/sign-in` | Public | Clerk sign in |
+| `/sign-up` | Public | Clerk sign up |
+| `/dashboard` | Protected | User dashboard |
+| `/profile` | Protected | Profile settings |
 
 ## Development Phases
 
 | Phase | Focus | Status |
 |---|---|---|
-| 01 | Foundation | ✅ In progress |
-| 02 | Auth & Users | Pending |
+| 01 | Foundation | ✅ Done |
+| 02 | Auth & Users | ✅ Done |
 | 03 | Projects & Repo | Pending |
 | 04 | Scan Engine | Pending |
 | 05 | Report & Score | Pending |

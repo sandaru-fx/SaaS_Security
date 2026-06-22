@@ -20,9 +20,17 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key"
     cors_origins: str = "http://localhost:3000"
 
+    clerk_secret_key: str = ""
+    clerk_jwks_url: str = ""
+    clerk_jwt_issuer: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def clerk_enabled(self) -> bool:
+        return bool(self.clerk_secret_key and self.clerk_jwks_url)
 
 
 @lru_cache

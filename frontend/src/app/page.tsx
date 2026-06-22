@@ -1,3 +1,8 @@
+import Link from "next/link";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+
+import { AppHeader } from "@/components/AppHeader";
+
 async function getHealthStatus() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -17,19 +22,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <header className="border-b border-zinc-800">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-sm font-bold text-zinc-950">
-              A
-            </div>
-            <span className="font-semibold tracking-tight">AI Software Auditor</span>
-          </div>
-          <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
-            Phase 1 — Foundation
-          </span>
-        </div>
-      </header>
+      <AppHeader badge="Phase 2 — Auth" />
 
       <main className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-3xl">
@@ -68,11 +61,7 @@ export default async function Home() {
             System Status
           </h2>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <StatusBadge
-              label="Frontend"
-              status="healthy"
-              detail="Next.js running"
-            />
+            <StatusBadge label="Frontend" status="healthy" detail="Next.js running" />
             <StatusBadge
               label="API"
               status={health ? "healthy" : "offline"}
@@ -82,27 +71,32 @@ export default async function Home() {
                   : "Start backend on :8000"
               }
             />
+            <StatusBadge label="Auth" status="healthy" detail="Clerk integrated" />
             <StatusBadge
               label="Database"
               status="pending"
-              detail="Phase 1 — Docker required"
-            />
-            <StatusBadge
-              label="Worker"
-              status="pending"
-              detail="Phase 4 — Scan engine"
+              detail="Docker required for sync"
             />
           </div>
         </div>
 
         <div className="mt-12 flex flex-wrap gap-4">
-          <button
-            type="button"
-            disabled
-            className="cursor-not-allowed rounded-lg bg-emerald-500/50 px-6 py-3 text-sm font-semibold text-zinc-950"
-          >
-            Start Audit — Phase 3
-          </button>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            >
+              Go to Dashboard →
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <Link
+              href="/sign-up"
+              className="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            >
+              Get Started Free
+            </Link>
+          </SignedOut>
           <a
             href="http://localhost:8000/docs"
             target="_blank"
