@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,8 @@ from app.schemas.scan import (
     ScanResponse,
 )
 from app.services import audit_report, project_service, scan_service
+from app.services.pdf_service import generate_audit_pdf
+from app.services.subscription_service import has_feature
 
 router = APIRouter(tags=["scans"])
 
@@ -139,3 +142,36 @@ async def get_audit_report(
     if not scan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
     return await audit_report.build_audit_report(db, scan)
+
+
+@router.get("/scans/{scan_id}/report/pdf")
+async def download_audit_pdf(
+    scan_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    if not has_feature(current_user, "pdf_export"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="PDF export is a Pro feature. Upgrade your plan to download reports.",
+        )
+
+    scan = await scan_service.get_scan(db, current_user.id, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if scan.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PDF is available only for completed audits.",
+        )
+
+    project = await project_service.get_user_project(db, current_user.id, scan.project_id)
+    report = await audit_report.build_audit_report(db, scan)
+    pdf_bytes = generate_audit_pdf(report, project_name=project.name if project else "Project")
+
+    filename = f"audit-report-{scan_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -82,6 +82,29 @@ SaaS_2/
 - [x] Compare scans — before vs after with score and category deltas
 - [x] Project settings — rename and update description
 
+### Phase 9 — Monetization & Pro Features
+- [x] Subscription plans (Free / Pro / Team) with usage limits
+- [x] Free plan: 2 audits/month; Pro/Team: unlimited
+- [x] Stripe checkout, billing portal, and webhook integration
+- [x] PDF audit report export (Pro feature)
+- [x] AI Deep Audit gated to Pro/Team plans
+- [x] Landing page with pricing section
+- [x] Billing page with plan management and usage meter
+
+## Stripe Setup (Phase 9)
+
+1. Create products/prices in [Stripe Dashboard](https://dashboard.stripe.com)
+2. Add to root `.env`:
+   ```env
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_PRICE_PRO=price_...
+   STRIPE_PRICE_TEAM=price_...
+   FRONTEND_URL=http://localhost:3000
+   ```
+3. Forward webhooks locally: `stripe listen --forward-to localhost:8000/api/billing/webhook`
+4. Without Stripe keys the app runs on the Free plan — no payments required for development.
+
 ## AI Auditor (Phase 6)
 
 The AI Auditor turns raw findings into executive-friendly narratives.

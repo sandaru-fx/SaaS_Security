@@ -176,6 +176,39 @@ export type ScanCompareResult = {
   improved: boolean;
 };
 
+export type PlanFeatures = {
+  pdf_export: boolean;
+  deep_audit: boolean;
+  private_repos: boolean;
+  unlimited_scans: boolean;
+};
+
+export type SubscriptionInfo = {
+  plan: string;
+  plan_label: string;
+  price_display: string;
+  scans_used: number;
+  scan_limit: number | null;
+  scans_remaining: number | null;
+  features: PlanFeatures;
+  billing_period_start: string | null;
+  has_active_subscription: boolean;
+  stripe_enabled: boolean;
+};
+
+export type PricingPlan = {
+  id: string;
+  label: string;
+  price_display: string;
+  scan_limit: number | null;
+  features: string[];
+};
+
+export type PricingData = {
+  plans: PricingPlan[];
+  stripe_enabled: boolean;
+};
+
 export async function apiFetch<T>(
   path: string,
   token: string,
@@ -316,4 +349,41 @@ export async function compareScans(
     `/api/dashboard/projects/${projectId}/scans/compare?${params}`,
     token,
   );
+}
+
+export async function getPricing(): Promise<PricingData> {
+  const response = await fetch(`${API_URL}/api/billing/pricing`);
+  if (!response.ok) throw new Error("Failed to load pricing");
+  return response.json();
+}
+
+export async function getSubscription(token: string): Promise<SubscriptionInfo> {
+  return apiFetch<SubscriptionInfo>("/api/billing/subscription", token);
+}
+
+export async function createCheckout(token: string, plan: "pro" | "team"): Promise<string> {
+  const data = await apiFetch<{ checkout_url: string }>("/api/billing/checkout", token, {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+  return data.checkout_url;
+}
+
+export async function createBillingPortal(token: string): Promise<string> {
+  const data = await apiFetch<{ portal_url: string }>("/api/billing/portal", token, {
+    method: "POST",
+  });
+  return data.portal_url;
+}
+
+export async function downloadAuditPdf(token: string, scanId: string): Promise<Blob> {
+  const response = await fetch(`${API_URL}/api/scans/${scanId}/report/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "PDF download failed" }));
+    const detail = error.detail;
+    throw new Error(typeof detail === "string" ? detail : "PDF download failed");
+  }
+  return response.blob();
 }

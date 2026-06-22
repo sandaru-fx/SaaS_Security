@@ -70,6 +70,13 @@ export default function NewProjectPage() {
         <p className="mt-2 text-zinc-400">
           Connect a public GitHub repository or upload your code as a ZIP file.
         </p>
+        <p className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-200">
+          Private GitHub repos are available on{" "}
+          <a href="/billing" className="font-medium text-indigo-300 underline">
+            Pro & Team plans
+          </a>
+          . Public repos work on the Free plan.
+        </p>
 
         <div className="mt-8 flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
           <TabButton active={tab === "github"} onClick={() => setTab("github")}>

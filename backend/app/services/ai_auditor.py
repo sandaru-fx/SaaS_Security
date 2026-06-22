@@ -222,9 +222,10 @@ def _generate_with_openai(scan: Scan, issues: list[Issue]) -> dict | None:
         return None
 
 
-def enrich_scan_with_ai(scan: Scan, issues: list[Issue]) -> None:
+def enrich_scan_with_ai(scan: Scan, issues: list[Issue], *, allow_deep_audit: bool = True) -> None:
     """Populate AI narrative fields on the scan and per-issue business risk.
 
+    Deep Audit (OpenAI) requires Pro/Team when ``allow_deep_audit`` is True.
     Never raises: a failure here must not break a completed scan.
     """
     try:
@@ -234,7 +235,7 @@ def enrich_scan_with_ai(scan: Scan, issues: list[Issue]) -> None:
 
         ai_result = None
         provider = "rule-based"
-        if get_settings().ai_enabled:
+        if get_settings().ai_enabled and allow_deep_audit:
             ai_result = _generate_with_openai(scan, issues)
             if ai_result and ai_result.get("summary"):
                 provider = "openai"

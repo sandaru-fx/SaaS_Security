@@ -15,8 +15,11 @@ import {
   ApiIssue,
   ApiScan,
   AuditReport,
+  SubscriptionInfo,
+  downloadAuditPdf,
   getAuditReport,
   getScan,
+  getSubscription,
   listScanIssues,
 } from "@/lib/api";
 
@@ -48,22 +51,26 @@ export default function ScanResultsPage() {
   const [selectedIssue, setSelectedIssue] = useState<ApiIssue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       const token = await getToken();
       if (!token) return;
 
-      const [scanData, issueData] = await Promise.all([
+      const [scanData, issueData, subData] = await Promise.all([
         getScan(token, scanId),
         listScanIssues(token, scanId, {
           severity: severityFilter === "all" ? undefined : severityFilter,
           category: categoryFilter === "all" ? undefined : categoryFilter,
         }),
+        getSubscription(token),
       ]);
 
       setScan(scanData);
       setIssues(issueData.issues);
+      setSubscription(subData);
       setError(null);
 
       if (scanData.status === "completed") {
@@ -109,9 +116,29 @@ export default function ScanResultsPage() {
     };
   }, [loadData]);
 
+  async function handleDownloadPdf() {
+    setPdfLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const blob = await downloadAuditPdf(token, scanId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `audit-report-${scanId}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "PDF download failed");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 7 — Extended Scans" />
+      <AppHeader badge="Phase 9 — Pro Reports" />
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
@@ -138,12 +165,32 @@ export default function ScanResultsPage() {
                 <h1 className="mt-2 text-3xl font-bold tracking-tight">Audit Results</h1>
                 <p className="mt-2 capitalize text-zinc-400">Status: {scan.status}</p>
               </div>
-              {(scan.status === "queued" || scan.status === "running") && (
-                <div className="flex items-center gap-2 text-amber-400">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-                  <span className="text-sm">Scanning in progress...</span>
-                </div>
-              )}
+              <div className="flex flex-col items-end gap-2">
+                {(scan.status === "queued" || scan.status === "running") && (
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                    <span className="text-sm">Scanning in progress...</span>
+                  </div>
+                )}
+                {scan.status === "completed" && subscription?.features.pdf_export && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={pdfLoading}
+                    className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50"
+                  >
+                    {pdfLoading ? "Generating PDF..." : "Download PDF Report"}
+                  </button>
+                )}
+                {scan.status === "completed" && subscription && !subscription.features.pdf_export && (
+                  <Link
+                    href="/billing"
+                    className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-300 hover:bg-amber-500/20"
+                  >
+                    Upgrade for PDF Export →
+                  </Link>
+                )}
+              </div>
             </div>
 
             {report && scan.status === "completed" && (

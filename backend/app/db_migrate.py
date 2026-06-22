@@ -28,6 +28,11 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
     ("scans", "ai_recommendations", "TEXT"),
     ("scans", "ai_provider", "VARCHAR(20)"),
     ("issues", "business_risk", "TEXT"),
+    ("users", "plan", "VARCHAR(20)"),
+    ("users", "stripe_customer_id", "VARCHAR(255)"),
+    ("users", "stripe_subscription_id", "VARCHAR(255)"),
+    ("users", "scans_used_this_period", "INTEGER"),
+    ("users", "billing_period_start", "TIMESTAMP WITH TIME ZONE"),
 ]
 
 

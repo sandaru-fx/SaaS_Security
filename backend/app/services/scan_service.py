@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.models.project import Project
 from app.models.scan import Scan
 from app.models.user import User
+from app.services import subscription_service
 from app.services.scan_runner import execute_scan
 
 logger = logging.getLogger(__name__)
@@ -25,12 +26,17 @@ async def create_scan(
     if project.status != "ready":
         raise ValueError("Project must be in 'ready' status before scanning")
 
+    allowed, message = subscription_service.can_start_scan(user)
+    if not allowed:
+        raise ValueError(message)
+
     scan = Scan(
         project_id=project.id,
         user_id=user.id,
         status="queued",
     )
     db.add(scan)
+    subscription_service.record_scan_usage(user)
     await db.commit()
     await db.refresh(scan)
     return scan

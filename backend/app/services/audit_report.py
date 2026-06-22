@@ -55,9 +55,13 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         needs_commit = True
 
     if scan.status == "completed" and scan.ai_summary is None:
+        from app.models.user import User
         from app.services.ai_auditor import enrich_scan_with_ai
+        from app.services.subscription_service import has_feature
 
-        enrich_scan_with_ai(scan, issues)
+        user = await db.get(User, scan.user_id)
+        allow_deep = has_feature(user, "deep_audit") if user else False
+        enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
         needs_commit = True
 
     if needs_commit:

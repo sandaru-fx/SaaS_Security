@@ -54,7 +54,12 @@ def execute_scan(scan_id: str) -> None:
         apply_scores_to_scan(scan, issues)
 
         from app.services.ai_auditor import enrich_scan_with_ai
-        enrich_scan_with_ai(scan, issues)
+        from app.models.user import User
+        from app.services.subscription_service import has_feature
+
+        user = session.get(User, scan.user_id)
+        allow_deep = has_feature(user, "deep_audit") if user else False
+        enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
 
         scan.scanners_used = ",".join(scanners_used)
         scan.status = "completed"

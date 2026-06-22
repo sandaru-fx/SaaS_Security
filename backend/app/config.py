@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = ""
 
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_pro: str = ""
+    stripe_price_team: str = ""
+    frontend_url: str = "http://localhost:3000"
+
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000
@@ -44,6 +50,10 @@ class Settings(BaseSettings):
     @property
     def ai_enabled(self) -> bool:
         return bool(self.openai_api_key)
+
+    @property
+    def stripe_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_price_pro)
 
 
 @lru_cache
