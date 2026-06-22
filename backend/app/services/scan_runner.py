@@ -46,6 +46,7 @@ def execute_scan(scan_id: str) -> None:
         if project.source_type == "website":
             from app.scanners.website_scanner import scan_website
             from app.scanners.active_dast import scan_active_dast
+            from app.scanners.asm import scan_asm
             from app.scanners.cwe_mappings import enrich_finding_tags
             from app.scanners.dedup import deduplicate_findings
             from app.services.project_service import deserialize_auth
@@ -54,14 +55,35 @@ def execute_scan(scan_id: str) -> None:
             raw_findings = scan_website(project.repo_url)
             scanners_used = ["website-security"]
 
+            asm_hosts: list[str] = []
+            if project.asm_enabled and project.domain_verified:
+                try:
+                    asm_findings, discovery = scan_asm(
+                        project.asm_root_domain or project.repo_url,
+                        feed_active_dast=project.active_dast_enabled,
+                    )
+                    raw_findings.extend(asm_findings)
+                    asm_hosts = discovery.live_hosts
+                    scanners_used.append("asm")
+                except Exception as exc:
+                    logger.warning("ASM scan failed for %s: %s", project.repo_url, exc)
+
             if project.active_dast_enabled and project.domain_verified:
                 raw_findings.extend(scan_active_dast(project.repo_url, auth=auth))
                 scanners_used.append("active-dast")
+                for host_url in asm_hosts[:6]:
+                    if host_url.rstrip("/") == (project.repo_url or "").rstrip("/"):
+                        continue
+                    try:
+                        raw_findings.extend(scan_active_dast(host_url, auth=auth))
+                    except Exception as exc:
+                        logger.debug("Active DAST on ASM host %s failed: %s", host_url, exc)
 
             findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
 
         elif project.source_type == "api":
             from app.scanners.api_scanner import scan_api
+            from app.scanners.asm import scan_asm
             from app.scanners.cwe_mappings import enrich_finding_tags
             from app.scanners.dedup import deduplicate_findings
             from app.services.project_service import deserialize_auth
@@ -72,8 +94,20 @@ def execute_scan(scan_id: str) -> None:
                 return
             auth = deserialize_auth(project.auth_config)
             raw_findings = scan_api(spec_url, auth=auth)
-            findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
             scanners_used = ["api-security"]
+
+            if project.asm_enabled and project.domain_verified:
+                try:
+                    asm_findings, _ = scan_asm(
+                        project.asm_root_domain or spec_url,
+                        feed_active_dast=False,
+                    )
+                    raw_findings.extend(asm_findings)
+                    scanners_used.append("asm")
+                except Exception as exc:
+                    logger.warning("ASM scan failed for API %s: %s", spec_url, exc)
+
+            findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
 
         else:
             project_dir = _resolve_project_dir(project.storage_path)

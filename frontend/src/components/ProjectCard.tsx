@@ -64,6 +64,11 @@ export function ProjectCard({ project }: { project: ApiProject }) {
             OWASP API Top 10
           </span>
         )}
+        {project.asm_enabled && (
+          <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
+            ASM Recon
+          </span>
+        )}
       </div>
 
       {project.repo_url && (

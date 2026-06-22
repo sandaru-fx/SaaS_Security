@@ -42,6 +42,8 @@ export type ApiProject = {
   active_dast_enabled?: boolean;
   api_spec_url?: string | null;
   has_auth_configured?: boolean;
+  asm_enabled?: boolean;
+  asm_root_domain?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -417,6 +419,7 @@ export async function createWebsiteProject(
     description?: string;
     ownership_confirmed: boolean;
     active_dast_enabled?: boolean;
+    asm_enabled?: boolean;
     auth?: AuthConfig | null;
   },
 ): Promise<ApiProject> {
@@ -433,6 +436,7 @@ export async function createApiProject(
     api_spec_url: string;
     description?: string;
     ownership_confirmed: boolean;
+    asm_enabled?: boolean;
     auth?: AuthConfig | null;
   },
 ): Promise<ApiProject> {
@@ -445,9 +449,20 @@ export async function createApiProject(
 export async function updateProjectAuth(
   token: string,
   projectId: string,
-  data: { auth: AuthConfig; active_dast_enabled?: boolean | null },
+  data: { auth: AuthConfig; active_dast_enabled?: boolean | null; asm_enabled?: boolean | null },
 ): Promise<ApiProject> {
   return apiFetch<ApiProject>(`/api/projects/${projectId}/auth`, token, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectAsm(
+  token: string,
+  projectId: string,
+  data: { enabled: boolean; root_domain?: string | null },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>(`/api/projects/${projectId}/asm`, token, {
     method: "PATCH",
     body: JSON.stringify(data),
   });

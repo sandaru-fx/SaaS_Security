@@ -38,6 +38,8 @@ class Project(Base):
     active_dast_enabled: Mapped[bool] = mapped_column(default=False)
     api_spec_url: Mapped[str] = mapped_column(String(500), nullable=True)
     auth_config: Mapped[str] = mapped_column(Text, nullable=True)
+    asm_enabled: Mapped[bool] = mapped_column(default=False)
+    asm_root_domain: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

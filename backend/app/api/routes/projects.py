@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.project import (
     DomainVerificationInfo,
+    ProjectAsmUpdate,
     ProjectAuthUpdate,
     ProjectCreateApi,
     ProjectCreateGithub,
@@ -98,6 +99,30 @@ async def update_project_auth(
             detail="Auth configuration applies to website and api projects only",
         )
     project = await project_service.update_project_auth(db, project, payload)
+    return ProjectResponse.model_validate(project)
+
+
+@router.patch("/{project_id}/asm", response_model=ProjectResponse)
+async def update_project_asm(
+    project_id: UUID,
+    payload: ProjectAsmUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    project = await project_service.get_user_project(db, current_user.id, project_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.source_type not in ("website", "api"):
+        raise HTTPException(
+            status_code=400,
+            detail="Attack Surface Management applies to website and api projects only",
+        )
+    if payload.enabled and not project.domain_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Verify domain ownership before enabling Attack Surface Management",
+        )
+    project = await project_service.update_project_asm(db, project, payload)
     return ProjectResponse.model_validate(project)
 
 

@@ -12,6 +12,7 @@ from app.models.project import Project
 from app.models.user import User
 from app.schemas.project import (
     AuthConfig,
+    ProjectAsmUpdate,
     ProjectAuthUpdate,
     ProjectCreateApi,
     ProjectCreateGithub,
@@ -286,6 +287,8 @@ async def create_website_project(
         domain_verified=False,
         status="processing",
         active_dast_enabled=bool(payload.active_dast_enabled),
+        asm_enabled=bool(payload.asm_enabled),
+        asm_root_domain=_derive_asm_root(normalized_url) if payload.asm_enabled else None,
         auth_config=_serialize_auth(payload.auth),
     )
     db.add(project)
@@ -370,6 +373,8 @@ async def create_api_project(
         domain_verified=False,
         status="processing",
         active_dast_enabled=True,
+        asm_enabled=bool(payload.asm_enabled),
+        asm_root_domain=_derive_asm_root(spec_url) if payload.asm_enabled else None,
         auth_config=_serialize_auth(payload.auth),
     )
     db.add(project)
@@ -407,9 +412,43 @@ async def update_project_auth(
     project.auth_config = _serialize_auth(payload.auth)
     if payload.active_dast_enabled is not None:
         project.active_dast_enabled = bool(payload.active_dast_enabled)
+    if payload.asm_enabled is not None:
+        project.asm_enabled = bool(payload.asm_enabled)
+        if project.asm_enabled and not project.asm_root_domain:
+            project.asm_root_domain = _derive_asm_root(project.repo_url or "")
     await db.commit()
     await db.refresh(project)
     return project
+
+
+async def update_project_asm(
+    db: AsyncSession,
+    project: Project,
+    payload: ProjectAsmUpdate,
+) -> Project:
+    project.asm_enabled = bool(payload.enabled)
+    if payload.root_domain:
+        project.asm_root_domain = payload.root_domain.strip().lower()
+    elif project.asm_enabled and not project.asm_root_domain:
+        project.asm_root_domain = _derive_asm_root(project.repo_url or "")
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+def _derive_asm_root(url: str) -> str | None:
+    from urllib.parse import urlparse
+
+    if not url:
+        return None
+    raw = url.strip().lower()
+    if "://" in raw:
+        host = urlparse(raw).hostname or ""
+    else:
+        host = raw.strip(".")
+    if host.startswith("www."):
+        host = host[4:]
+    return host or None
 
 
 async def delete_project(db: AsyncSession, user: User, project: Project) -> None:
