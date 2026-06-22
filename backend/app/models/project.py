@@ -31,6 +31,10 @@ class Project(Base):
     file_count: Mapped[int] = mapped_column(Integer, default=0)
     webhook_url: Mapped[str] = mapped_column(String(500), nullable=True)
     webhook_secret: Mapped[str] = mapped_column(String(255), nullable=True)
+    domain_verification_token: Mapped[str] = mapped_column(String(64), nullable=True)
+    domain_verified: Mapped[bool] = mapped_column(default=False)
+    domain_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    pr_checks_enabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

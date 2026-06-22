@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AIAuditSummary } from "@/components/AIAuditSummary";
 import { AppHeader } from "@/components/AppHeader";
 import { AuditChatPanel } from "@/components/AuditChatPanel";
+import { ComplianceBreakdown } from "@/components/ComplianceBreakdown";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { HealthScoreRing } from "@/components/HealthScoreRing";
 import { IssueCard } from "@/components/IssueCard";
@@ -269,6 +270,10 @@ export default function ScanResultsPage() {
             )}
 
             {report && scan.status === "completed" && <AIAuditSummary report={report} />}
+
+            {report && scan.status === "completed" && report.compliance.length > 0 && (
+              <ComplianceBreakdown controls={report.compliance} />
+            )}
 
             {scan.status === "completed" && (
               <AuditChatPanel

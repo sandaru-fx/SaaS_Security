@@ -92,6 +92,15 @@ class CategoryScoreResponse(BaseModel):
     issue_count: int
 
 
+class ComplianceControlResponse(BaseModel):
+    framework: str
+    control_id: str
+    title: str
+    issue_count: int
+    max_severity: str
+    status: str
+
+
 class AuditReportResponse(BaseModel):
     scan_id: UUID
     project_id: UUID
@@ -112,6 +121,7 @@ class AuditReportResponse(BaseModel):
     ai_business_risk: str | None = None
     ai_recommendations: list[str] = Field(default_factory=list)
     ai_provider: str | None = None
+    compliance: list[ComplianceControlResponse] = Field(default_factory=list)
 
 
 class ChatMessage(BaseModel):

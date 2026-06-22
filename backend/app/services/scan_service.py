@@ -26,6 +26,12 @@ async def create_scan(
     if project.status != "ready":
         raise ValueError("Project must be in 'ready' status before scanning")
 
+    if project.source_type == "website" and not project.domain_verified:
+        raise ValueError(
+            "Domain ownership must be verified before scanning this website. "
+            "Complete verification on the project page."
+        )
+
     allowed, message = subscription_service.can_start_scan(user)
     if not allowed:
         raise ValueError(message)

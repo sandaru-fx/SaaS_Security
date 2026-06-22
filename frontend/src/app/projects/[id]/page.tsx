@@ -10,13 +10,17 @@ import { ScanComparePanel } from "@/components/ScanComparePanel";
 import {
   ApiProject,
   ApiScan,
+  DomainVerificationInfo,
   ScanCompareResult,
   compareScans,
   deleteProject,
+  getDomainVerification,
   getProject,
   listScans,
   startScan,
   updateProject,
+  updateProjectPrChecks,
+  verifyDomain,
 } from "@/lib/api";
 
 const statusColors: Record<ApiProject["status"], string> = {
@@ -53,8 +57,13 @@ export default function ProjectDetailPage() {
   const [targetScanId, setTargetScanId] = useState("");
   const [comparison, setComparison] = useState<ScanCompareResult | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [domainInfo, setDomainInfo] = useState<DomainVerificationInfo | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [prChecksLoading, setPrChecksLoading] = useState(false);
 
   const completedScans = scans.filter((s) => s.status === "completed");
+  const websiteNeedsVerification =
+    project?.source_type === "website" && !project.domain_verified;
 
   useEffect(() => {
     async function load() {
@@ -69,6 +78,15 @@ export default function ProjectDetailPage() {
         setScans(scanData.scans);
         setEditName(projectData.name);
         setEditDescription(projectData.description ?? "");
+
+        if (projectData.source_type === "website") {
+          try {
+            const info = await getDomainVerification(token, projectId);
+            setDomainInfo(info);
+          } catch {
+            setDomainInfo(null);
+          }
+        }
 
         const completed = scanData.scans.filter((s) => s.status === "completed");
         if (completed.length >= 2) {
@@ -221,15 +239,116 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
+            {project.source_type === "website" && domainInfo && (
+              <section className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/10 p-6">
+                <h2 className="text-sm font-medium uppercase tracking-widest text-amber-300">
+                  Domain Ownership Verification
+                </h2>
+                {domainInfo.verified ? (
+                  <p className="mt-3 text-sm text-emerald-300">
+                    Domain verified — you can run website security scans.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm text-zinc-300">
+                      Verify you own <strong>{domainInfo.domain}</strong> before scanning.
+                      Choose one method:
+                    </p>
+                    <div className="mt-4 space-y-3 text-sm">
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+                        <p className="text-zinc-400">DNS TXT record</p>
+                        <p className="mt-1 font-mono text-xs text-zinc-200">
+                          {domainInfo.dns_record_name} → {domainInfo.dns_record_value}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+                        <p className="text-zinc-400">HTML meta tag (homepage)</p>
+                        <code className="mt-1 block break-all text-xs text-zinc-200">
+                          {domainInfo.meta_tag}
+                        </code>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setVerifying(true);
+                        setError(null);
+                        try {
+                          const token = await getToken();
+                          if (!token) return;
+                          const info = await verifyDomain(token, projectId);
+                          setDomainInfo(info);
+                          const updated = await getProject(token, projectId);
+                          setProject(updated);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Verification failed");
+                        } finally {
+                          setVerifying(false);
+                        }
+                      }}
+                      disabled={verifying}
+                      className="mt-4 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                    >
+                      {verifying ? "Checking..." : "Verify Domain"}
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
+
+            {project.source_type === "github" && (
+              <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+                <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-500">
+                  GitHub PR Checks
+                </h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Enable to scan pull requests and post findings as PR comments. Requires GitHub
+                  PAT in Enterprise settings and webhook at{" "}
+                  <code className="text-emerald-400">POST /api/integrations/github/webhook</code>.
+                </p>
+                <label className="mt-4 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={project.pr_checks_enabled ?? false}
+                    onChange={async (e) => {
+                      setPrChecksLoading(true);
+                      try {
+                        const token = await getToken();
+                        if (!token) return;
+                        const updated = await updateProjectPrChecks(
+                          token,
+                          projectId,
+                          e.target.checked,
+                        );
+                        setProject(updated);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Failed to update PR checks");
+                      } finally {
+                        setPrChecksLoading(false);
+                      }
+                    }}
+                    disabled={prChecksLoading}
+                    className="h-4 w-4 rounded border-zinc-600"
+                  />
+                  <span className="text-sm text-zinc-300">Enable PR security checks</span>
+                </label>
+              </section>
+            )}
+
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={handleStartAudit}
-                disabled={project.status !== "ready" || scanning}
+                disabled={project.status !== "ready" || scanning || websiteNeedsVerification}
                 className="rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {scanning ? "Starting Audit..." : "Re-scan Project"}
               </button>
+              {websiteNeedsVerification && (
+                <p className="self-center text-sm text-amber-300">
+                  Verify domain ownership before scanning.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => setEditing((v) => !v)}
