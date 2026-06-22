@@ -4,18 +4,33 @@ import subprocess
 from pathlib import Path
 
 from app.scanners.base import ScanFinding
-from app.scanners.secrets import SKIP_DIRS
+from app.scanners.cwe_mappings import parse_semgrep_metadata
+
+SEMGREP_CONFIGS = [
+    "p/owasp-top-ten",
+    "p/security-audit",
+    "auto",
+]
 
 
 def scan_semgrep(project_dir: Path) -> list[ScanFinding]:
     if not shutil.which("semgrep"):
         return []
 
+    for config in SEMGREP_CONFIGS:
+        findings = _run_semgrep_config(project_dir, config)
+        if findings:
+            return findings
+    return []
+
+
+def _run_semgrep_config(project_dir: Path, config: str) -> list[ScanFinding]:
     try:
         result = subprocess.run(
             [
                 "semgrep",
-                "--config", "auto",
+                "--config",
+                config,
                 "--json",
                 "--quiet",
                 str(project_dir),
@@ -47,6 +62,9 @@ def scan_semgrep(project_dir: Path) -> list[ScanFinding]:
         except ValueError:
             pass
 
+        tags = parse_semgrep_metadata(metadata)
+        finding_metadata = {"semgrep_config": config, **tags}
+
         findings.append(
             ScanFinding(
                 category="security",
@@ -61,6 +79,7 @@ def scan_semgrep(project_dir: Path) -> list[ScanFinding]:
                 rule_id=item.get("check_id", "semgrep-rule"),
                 scanner="semgrep",
                 confidence="high",
+                metadata=finding_metadata,
             )
         )
 

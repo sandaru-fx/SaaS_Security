@@ -12,7 +12,7 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip";
+export type SourceType = "github" | "zip" | "website";
 
 export type ApiProject = {
   id: string;
@@ -79,7 +79,22 @@ export type ApiIssue = {
   report_category: string | null;
   dismissed: boolean;
   dismissed_reason: string | null;
+  cwe_id: string | null;
+  owasp_category: string | null;
+  ai_triage_verdict: string | null;
+  ai_triage_reason: string | null;
+  ai_fix_suggestion: string | null;
   created_at: string;
+};
+
+export type AuditChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AuditChatResponse = {
+  reply: string;
+  provider: string;
 };
 
 export type CategoryScore = {
@@ -300,6 +315,21 @@ export async function uploadZipProject(
   });
 }
 
+export async function createWebsiteProject(
+  token: string,
+  data: {
+    name: string;
+    website_url: string;
+    description?: string;
+    ownership_confirmed: boolean;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/website", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function updateProject(
   token: string,
   projectId: string,
@@ -341,6 +371,17 @@ export async function listScanIssues(
 
 export async function getAuditReport(token: string, scanId: string): Promise<AuditReport> {
   return apiFetch<AuditReport>(`/api/scans/${scanId}/report`, token);
+}
+
+export async function chatWithAudit(
+  token: string,
+  scanId: string,
+  data: { message: string; history?: AuditChatMessage[] },
+): Promise<AuditChatResponse> {
+  return apiFetch<AuditChatResponse>(`/api/scans/${scanId}/chat`, token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getDashboard(token: string): Promise<DashboardData> {

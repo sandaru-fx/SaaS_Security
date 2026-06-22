@@ -30,7 +30,11 @@ export function ProjectCard({ project }: { project: ApiProject }) {
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">
-          {project.source_type === "github" ? "GitHub" : "ZIP Upload"}
+          {project.source_type === "github"
+            ? "GitHub"
+            : project.source_type === "website"
+              ? "Website"
+              : "ZIP Upload"}
         </span>
         {project.file_count > 0 && (
           <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">

@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from app.scanners.base import ScanFinding
+from app.scanners.cwe_mappings import enrich_finding_tags
 
 SKIP_DIRS = {
     "node_modules",
@@ -77,22 +78,24 @@ def scan_secrets(project_dir: Path) -> list[ScanFinding]:
                 if re.search(pattern, line):
                     rel_path = str(file_path.relative_to(project_dir))
                     findings.append(
-                        ScanFinding(
-                            category="secrets",
-                            severity=severity,
-                            title=title,
-                            description=f"Potential secret detected in `{rel_path}` at line {line_no}.",
-                            impact="Credentials in code can leak via Git history and enable unauthorized access.",
-                            fix_recommendation=(
-                                "Move secrets to environment variables or a secrets manager. "
-                                "Rotate any exposed credentials immediately."
-                            ),
-                            file_path=rel_path,
-                            line_start=line_no,
-                            line_end=line_no,
-                            rule_id=rule_id,
-                            scanner="secrets",
-                            confidence="high",
+                        enrich_finding_tags(
+                            ScanFinding(
+                                category="secrets",
+                                severity=severity,
+                                title=title,
+                                description=f"Potential secret detected in `{rel_path}` at line {line_no}.",
+                                impact="Credentials in code can leak via Git history and enable unauthorized access.",
+                                fix_recommendation=(
+                                    "Move secrets to environment variables or a secrets manager. "
+                                    "Rotate any exposed credentials immediately."
+                                ),
+                                file_path=rel_path,
+                                line_start=line_no,
+                                line_end=line_no,
+                                rule_id=rule_id,
+                                scanner="secrets",
+                                confidence="high",
+                            )
                         )
                     )
                     break

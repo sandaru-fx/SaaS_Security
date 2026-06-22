@@ -2,6 +2,8 @@ from pathlib import Path
 
 from app.scanners.architecture import scan_architecture
 from app.scanners.base import ScanFinding
+from app.scanners.cwe_mappings import enrich_finding_tags
+from app.scanners.dedup import deduplicate_findings
 from app.scanners.dependencies import scan_dependencies
 from app.scanners.devops import scan_devops
 from app.scanners.performance import scan_performance
@@ -50,5 +52,9 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     devops_findings = scan_devops(project_dir)
     scanners_used.append("devops")
     all_findings.extend(devops_findings)
+
+    all_findings = [
+        enrich_finding_tags(f) for f in deduplicate_findings(all_findings)
+    ]
 
     return all_findings, scanners_used

@@ -5,9 +5,9 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { createGithubProject, uploadZipProject } from "@/lib/api";
+import { createGithubProject, createWebsiteProject, uploadZipProject } from "@/lib/api";
 
-type Tab = "github" | "zip";
+type Tab = "github" | "zip" | "website";
 
 export default function NewProjectPage() {
   const { getToken } = useAuth();
@@ -20,6 +20,8 @@ export default function NewProjectPage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [branch, setBranch] = useState("main");
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -38,6 +40,17 @@ export default function NewProjectPage() {
           repo_url: repoUrl,
           branch,
           description: description || undefined,
+        });
+        projectId = project.id;
+      } else if (tab === "website") {
+        if (!ownershipConfirmed) {
+          throw new Error("You must confirm you own or have permission to scan this website");
+        }
+        const project = await createWebsiteProject(token, {
+          name,
+          website_url: websiteUrl,
+          description: description || undefined,
+          ownership_confirmed: true,
         });
         projectId = project.id;
       } else {
@@ -68,7 +81,7 @@ export default function NewProjectPage() {
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight">Create Project</h1>
         <p className="mt-2 text-zinc-400">
-          Connect a public GitHub repository or upload your code as a ZIP file.
+          Connect a GitHub repo, upload source code, or scan a live website URL.
         </p>
         <p className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-200">
           Private GitHub repos are available on{" "}
@@ -84,6 +97,9 @@ export default function NewProjectPage() {
           </TabButton>
           <TabButton active={tab === "zip"} onClick={() => setTab("zip")}>
             ZIP Upload
+          </TabButton>
+          <TabButton active={tab === "website"} onClick={() => setTab("website")}>
+            Website URL
           </TabButton>
         </div>
 
@@ -134,6 +150,35 @@ export default function NewProjectPage() {
                 Only public GitHub repositories are supported in this version.
               </p>
             </>
+          ) : tab === "website" ? (
+            <>
+              <Field label="Website URL" required>
+                <input
+                  type="url"
+                  required
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className={inputClass}
+                />
+              </Field>
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                <input
+                  type="checkbox"
+                  checked={ownershipConfirmed}
+                  onChange={(e) => setOwnershipConfirmed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  I confirm I own this website or have explicit permission to run a security
+                  scan against it.
+                </span>
+              </label>
+              <p className="text-xs text-zinc-500">
+                Passive checks only: security headers, TLS, cookies, exposed paths, and info
+                leaks. No exploitation.
+              </p>
+            </>
           ) : (
             <Field label="ZIP File" required>
               <input
@@ -161,7 +206,9 @@ export default function NewProjectPage() {
             {loading
               ? tab === "github"
                 ? "Cloning repository..."
-                : "Uploading & extracting..."
+                : tab === "website"
+                  ? "Verifying website..."
+                  : "Uploading & extracting..."
               : "Create Project"}
           </button>
         </form>

@@ -30,13 +30,12 @@ def execute_scan(scan_id: str) -> None:
             _fail_scan(session, scan, "Project not found")
             return
 
-        if project.status != "ready" or not project.storage_path:
+        if project.source_type == "website":
+            if project.status != "ready" or not project.repo_url:
+                _fail_scan(session, scan, "Website URL is not ready for scanning")
+                return
+        elif project.status != "ready" or not project.storage_path:
             _fail_scan(session, scan, "Project source code is not ready for scanning")
-            return
-
-        project_dir = _resolve_project_dir(project.storage_path)
-        if not project_dir.exists():
-            _fail_scan(session, scan, f"Project directory not found: {project_dir}")
             return
 
         scan.status = "running"
@@ -44,24 +43,40 @@ def execute_scan(scan_id: str) -> None:
         scan.error_message = None
         session.commit()
 
-        findings, scanners_used = run_all_scanners(project_dir)
+        if project.source_type == "website":
+            from app.scanners.website_scanner import scan_website
+            from app.scanners.cwe_mappings import enrich_finding_tags
+            from app.scanners.dedup import deduplicate_findings
 
-        from app.models.enterprise import CustomRule
-        from app.scanners.custom_rules import scan_custom_rules
+            findings = [
+                enrich_finding_tags(f)
+                for f in deduplicate_findings(scan_website(project.repo_url))
+            ]
+            scanners_used = ["website-security"]
+        else:
+            project_dir = _resolve_project_dir(project.storage_path)
+            if not project_dir.exists():
+                _fail_scan(session, scan, f"Project directory not found: {project_dir}")
+                return
 
-        rules = list(
-            session.execute(
-                select(CustomRule).where(
-                    CustomRule.user_id == scan.user_id,
-                    CustomRule.enabled.is_(True),
-                )
-            ).scalars().all()
-        )
-        if rules:
-            custom_findings = scan_custom_rules(project_dir, rules)
-            if custom_findings:
-                findings.extend(custom_findings)
-                scanners_used.append("custom-rules")
+            findings, scanners_used = run_all_scanners(project_dir)
+
+            from app.models.enterprise import CustomRule
+            from app.scanners.custom_rules import scan_custom_rules
+
+            rules = list(
+                session.execute(
+                    select(CustomRule).where(
+                        CustomRule.user_id == scan.user_id,
+                        CustomRule.enabled.is_(True),
+                    )
+                ).scalars().all()
+            )
+            if rules:
+                custom_findings = scan_custom_rules(project_dir, rules)
+                if custom_findings:
+                    findings.extend(custom_findings)
+                    scanners_used.append("custom-rules")
 
         _save_findings(session, scan, findings)
 
@@ -78,6 +93,10 @@ def execute_scan(scan_id: str) -> None:
         user = session.get(User, scan.user_id)
         allow_deep = has_feature(user, "deep_audit") if user else False
         enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
+
+        from app.services.ai_triage import run_ai_triage
+
+        run_ai_triage(scan, issues, project=project, allow_deep_audit=allow_deep)
 
         scan.scanners_used = ",".join(scanners_used)
         scan.status = "completed"

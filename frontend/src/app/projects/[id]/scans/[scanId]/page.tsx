@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { AIAuditSummary } from "@/components/AIAuditSummary";
 import { AppHeader } from "@/components/AppHeader";
+import { AuditChatPanel } from "@/components/AuditChatPanel";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { HealthScoreRing } from "@/components/HealthScoreRing";
 import { IssueCard } from "@/components/IssueCard";
@@ -268,6 +269,14 @@ export default function ScanResultsPage() {
             )}
 
             {report && scan.status === "completed" && <AIAuditSummary report={report} />}
+
+            {scan.status === "completed" && (
+              <AuditChatPanel
+                scanId={scanId}
+                getToken={getToken}
+                deepAuditEnabled={subscription?.features.deep_audit ?? false}
+              />
+            )}
 
             <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
               <CountCard label="Total" value={scan.total_issues} />

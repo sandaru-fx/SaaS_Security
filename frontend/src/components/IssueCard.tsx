@@ -33,6 +33,9 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
           {issue.priority != null && (
             <span className="text-xs text-zinc-500">Priority {issue.priority}</span>
           )}
+          {issue.ai_triage_verdict === "likely_false_positive" && (
+            <span className="text-xs text-amber-400">Likely false positive</span>
+          )}
         </div>
       </div>
 

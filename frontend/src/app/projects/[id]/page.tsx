@@ -194,10 +194,27 @@ export default function ProjectDetailPage() {
             </div>
 
             <div className="mt-8 space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-              <DetailRow label="Source" value={project.source_type === "github" ? "GitHub" : "ZIP Upload"} />
-              {project.repo_url && <DetailRow label="Repository" value={project.repo_url} mono />}
+              <DetailRow
+                label="Source"
+                value={
+                  project.source_type === "github"
+                    ? "GitHub"
+                    : project.source_type === "website"
+                      ? "Live Website"
+                      : "ZIP Upload"
+                }
+              />
+              {project.repo_url && (
+                <DetailRow
+                  label={project.source_type === "website" ? "Website URL" : "Repository"}
+                  value={project.repo_url}
+                  mono
+                />
+              )}
               {project.repo_branch && <DetailRow label="Branch" value={project.repo_branch} />}
-              <DetailRow label="Files" value={String(project.file_count)} />
+              {project.source_type !== "website" && (
+                <DetailRow label="Files" value={String(project.file_count)} />
+              )}
               <DetailRow label="Created" value={new Date(project.created_at).toLocaleString()} />
               {project.status_message && (
                 <DetailRow label="Status Message" value={project.status_message} />
