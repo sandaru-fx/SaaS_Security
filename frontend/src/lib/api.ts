@@ -105,6 +105,10 @@ export type ApiIssue = {
   reachable: string | null;
   reachable_files: string | null;
   taint_verified: boolean;
+  validated: string | null;
+  validated_principal: string | null;
+  validated_method: string | null;
+  secret_preview: string | null;
   created_at: string;
 };
 
