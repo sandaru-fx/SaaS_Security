@@ -1,0 +1,17 @@
+{
+  "name": "ai-software-auditor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Software Auditor Platform — monorepo root",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd backend && ..\\backend\\venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:worker": "cd workers && ..\\workers\\venv\\Scripts\\celery.exe -A celery_app worker --loglevel=info --pool=solo",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "setup:backend": "cd backend && python -m venv venv && venv\\Scripts\\pip install -r requirements.txt",
+    "setup:worker": "cd workers && python -m venv venv && venv\\Scripts\\pip install -r requirements.txt",
+    "setup": "npm run setup:backend && npm run setup:worker"
+  }
+}
