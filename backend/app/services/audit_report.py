@@ -11,6 +11,7 @@ from app.schemas.scan import (
 )
 from app.services.compliance_service import build_compliance_summary
 from app.services.ai_auditor import parse_recommendations
+from app.services.autofix_service import is_autofixable
 from app.services.risk_scoring import apply_risk_scores, get_risk_score
 from app.services.report_service import (
     apply_scores_to_scan,
@@ -65,6 +66,8 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         risk_factors=extra.get("risk_factors"),
         fix_now=str(extra.get("fix_now", "")).lower() == "true",
         severity_adjusted=extra.get("severity_adjusted"),
+        autofixable=is_autofixable(issue),
+        autofix_pr_url=extra.get("autofix_pr_url"),
         created_at=issue.created_at,
     )
 

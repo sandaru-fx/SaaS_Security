@@ -246,6 +246,9 @@ def _compute_risk_score(
     elif issue.scanner == "llm-security":
         score += 11
         factors.append("llm_risk")
+    elif issue.scanner == "zap-dast":
+        score += 14
+        factors.append("zap_verified")
     elif internet_exposed and issue.category in ("security", "secrets"):
         score += 4
         factors.append("live_target")

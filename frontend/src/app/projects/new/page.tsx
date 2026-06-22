@@ -40,6 +40,7 @@ export default function NewProjectPage() {
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [activeDastEnabled, setActiveDastEnabled] = useState(false);
   const [browserDastEnabled, setBrowserDastEnabled] = useState(false);
+  const [zapDastEnabled, setZapDastEnabled] = useState(false);
   const [asmEnabled, setAsmEnabled] = useState(false);
   const [apiSpecUrl, setApiSpecUrl] = useState("");
   const [cloudProvider, setCloudProvider] = useState<CloudProvider>("aws");
@@ -113,6 +114,7 @@ export default function NewProjectPage() {
           ownership_confirmed: true,
           active_dast_enabled: activeDastEnabled,
           browser_dast_enabled: browserDastEnabled,
+          zap_dast_enabled: zapDastEnabled,
           asm_enabled: asmEnabled,
           auth: buildAuthConfig(),
         });
@@ -387,6 +389,23 @@ export default function NewProjectPage() {
                   — Playwright renders JS SPAs and probes DOM XSS, CSP misconfig, sensitive
                   web storage, prototype pollution hints, and client-side routes. Domain
                   verification required.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-lg border border-orange-500/30 bg-orange-950/20 p-4">
+                <input
+                  type="checkbox"
+                  checked={zapDastEnabled}
+                  onChange={(e) => setZapDastEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-orange-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  <span className="font-semibold text-orange-300">
+                    Enable OWASP ZAP Baseline DAST
+                  </span>{" "}
+                  — runs ZAP baseline scan via Docker (requires ZAP_ENABLED on server + Docker).
+                  Complements built-in active DAST with industry-standard spider + alert rules.
+                  Domain verification required.
                 </span>
               </label>
 

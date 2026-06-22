@@ -89,6 +89,8 @@ class IssueResponse(BaseModel):
     risk_factors: str | None = None
     fix_now: bool = False
     severity_adjusted: str | None = None
+    autofixable: bool = False
+    autofix_pr_url: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -153,3 +155,9 @@ class AuditChatRequest(BaseModel):
 class AuditChatResponse(BaseModel):
     reply: str
     provider: str
+
+
+class AutofixPrResponse(BaseModel):
+    pr_url: str
+    file_path: str
+    action: str

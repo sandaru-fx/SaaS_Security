@@ -60,6 +60,11 @@ export function ProjectCard({ project }: { project: ApiProject }) {
             Browser DAST
           </span>
         )}
+        {project.zap_dast_enabled && (
+          <span className="rounded-full border border-orange-500/40 bg-orange-500/10 px-2.5 py-1 font-medium text-orange-300">
+            OWASP ZAP
+          </span>
+        )}
         {project.has_auth_configured && (
           <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-300">
             Auth

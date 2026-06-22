@@ -1,4 +1,4 @@
-"""GitHub Pull Request bot — scan PR branches and post audit comments."""
+"""GitHub Pull Request bot — scan PR branches, post comments, and commit status checks."""
 
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ from app.services.storage import safe_extract_zip
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+STATUS_CONTEXT = "ai-software-auditor/security"
 
 
 def verify_github_signature(payload: bytes, signature_header: str | None) -> bool:
@@ -91,11 +93,20 @@ def _run_pr_audit(
 
     try:
         with httpx.Client(follow_redirects=True, timeout=120.0) as client:
+            _post_commit_status(
+                client, full_name, head_sha, github_pat,
+                state="pending",
+                description="Security audit in progress…",
+            )
+
             response = client.get(url, headers=headers)
             if response.status_code != 200:
-                _post_pr_comment(
-                    client, full_name, pr_number, github_pat,
-                    f"Audit could not download PR code (HTTP {response.status_code}).",
+                msg = f"Audit could not download PR code (HTTP {response.status_code})."
+                _post_pr_comment(client, full_name, pr_number, github_pat, msg)
+                _post_commit_status(
+                    client, full_name, head_sha, github_pat,
+                    state="error",
+                    description="Could not download PR code",
                 )
                 return
 
@@ -109,6 +120,21 @@ def _run_pr_audit(
                 findings, scanners = run_all_scanners(extract_dir)
                 body = _format_pr_comment(findings, scanners)
                 _post_pr_comment(client, full_name, pr_number, github_pat, body)
+
+                counts = _severity_counts(findings)
+                if counts["critical"] > 0:
+                    state, desc = "failure", f"{counts['critical']} critical issue(s) found"
+                elif counts["high"] > 0:
+                    state, desc = "failure", f"{counts['high']} high severity issue(s) found"
+                else:
+                    state, desc = "success", "No critical or high severity issues"
+
+                _post_commit_status(
+                    client, full_name, head_sha, github_pat,
+                    state=state,
+                    description=desc,
+                    target_url=None,
+                )
     except Exception as exc:
         logger.exception("PR audit failed for %s#%s", full_name, pr_number)
         try:
@@ -117,28 +143,41 @@ def _run_pr_audit(
                     client, full_name, pr_number, github_pat,
                     f"Audit failed: {exc}",
                 )
+                _post_commit_status(
+                    client, full_name, head_sha, github_pat,
+                    state="error",
+                    description="Audit failed",
+                )
         except Exception:
             pass
+
+
+def _severity_counts(findings: list) -> dict[str, int]:
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for f in findings:
+        if f.severity in counts:
+            counts[f.severity] += 1
+    return counts
 
 
 def _format_pr_comment(findings: list, scanners: list[str]) -> str:
     if not findings:
         return (
             "## AI Software Auditor — PR Check\n\n"
-            "No issues detected by configured scanners. "
+            "✅ **Passed** — No issues detected.\n\n"
             f"Scanners: {', '.join(scanners)}."
         )
 
-    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    for f in findings:
-        if f.severity in counts:
-            counts[f.severity] += 1
+    counts = _severity_counts(findings)
+    status_emoji = "❌" if counts["critical"] or counts["high"] else "⚠️"
 
     lines = [
         "## AI Software Auditor — PR Check",
         "",
-        f"| Severity | Count |",
-        f"|----------|-------|",
+        f"{status_emoji} **{'Failed' if counts['critical'] or counts['high'] else 'Warning'}**",
+        "",
+        "| Severity | Count |",
+        "|----------|-------|",
         f"| Critical | {counts['critical']} |",
         f"| High | {counts['high']} |",
         f"| Medium | {counts['medium']} |",
@@ -158,6 +197,35 @@ def _format_pr_comment(findings: list, scanners: list[str]) -> str:
 
     lines.append("\n_Full audit available in the AI Software Auditor dashboard._")
     return "\n".join(lines)
+
+
+def _post_commit_status(
+    client: httpx.Client,
+    full_name: str,
+    sha: str,
+    github_pat: str,
+    *,
+    state: str,
+    description: str,
+    target_url: str | None = None,
+) -> None:
+    owner, repo = full_name.split("/", 1)
+    url = f"https://api.github.com/repos/{owner}/{repo}/statuses/{sha}"
+    headers = build_github_headers(github_pat)
+    payload: dict = {
+        "state": state,
+        "context": STATUS_CONTEXT,
+        "description": description[:140],
+    }
+    if target_url:
+        payload["target_url"] = target_url
+    response = client.post(url, headers=headers, json=payload)
+    if response.status_code not in (200, 201):
+        logger.warning(
+            "Failed to post commit status: HTTP %s %s",
+            response.status_code,
+            response.text[:200],
+        )
 
 
 def _post_pr_comment(

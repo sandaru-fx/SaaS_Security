@@ -131,6 +131,11 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             LLM Security
           </span>
         )}
+        {issue.scanner === "zap-dast" && (
+          <span className="rounded border border-orange-500/40 bg-orange-500/10 px-2 py-0.5 font-medium text-orange-300">
+            OWASP ZAP
+          </span>
+        )}
         {issue.validated === "inactive" && (
           <span
             className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"

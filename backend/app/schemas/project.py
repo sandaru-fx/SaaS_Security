@@ -62,6 +62,7 @@ class ProjectCreateWebsite(BaseModel):
     )
     active_dast_enabled: bool = Field(default=False)
     browser_dast_enabled: bool = Field(default=False)
+    zap_dast_enabled: bool = Field(default=False)
     asm_enabled: bool = Field(default=False)
     auth: AuthConfig | None = None
 
@@ -81,6 +82,7 @@ class ProjectAuthUpdate(BaseModel):
     auth: AuthConfig
     active_dast_enabled: bool | None = None
     browser_dast_enabled: bool | None = None
+    zap_dast_enabled: bool | None = None
     asm_enabled: bool | None = None
 
 
@@ -136,6 +138,7 @@ class ProjectResponse(BaseModel):
     pr_checks_enabled: bool = False
     active_dast_enabled: bool = False
     browser_dast_enabled: bool = False
+    zap_dast_enabled: bool = False
     api_spec_url: str | None = None
     has_auth_configured: bool = False
     asm_enabled: bool = False

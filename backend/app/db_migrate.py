@@ -46,6 +46,7 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
     ("projects", "asm_root_domain", "VARCHAR(255)"),
     ("projects", "cloud_provider", "VARCHAR(20)"),
     ("projects", "cloud_config", "TEXT"),
+    ("projects", "zap_dast_enabled", "BOOLEAN"),
 ]
 
 SQLITE_COLUMN_DEFAULTS: dict[tuple[str, str], str] = {
@@ -55,6 +56,7 @@ SQLITE_COLUMN_DEFAULTS: dict[tuple[str, str], str] = {
     ("projects", "active_dast_enabled"): "DEFAULT 0",
     ("projects", "browser_dast_enabled"): "DEFAULT 0",
     ("projects", "asm_enabled"): "DEFAULT 0",
+    ("projects", "zap_dast_enabled"): "DEFAULT 0",
 }
 
 

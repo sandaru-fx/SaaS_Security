@@ -1,13 +1,39 @@
 import { ApiIssue } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
+import { useState } from "react";
+import { createAutofixPr } from "@/lib/api";
 
 type IssueDetailModalProps = {
   issue: ApiIssue | null;
+  scanId?: string;
   onClose: () => void;
   onDismiss?: (issue: ApiIssue) => void;
+  onAutofix?: (issue: ApiIssue, prUrl: string) => void;
 };
 
-export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModalProps) {
+export function IssueDetailModal({ issue, scanId, onClose, onDismiss, onAutofix }: IssueDetailModalProps) {
+  const { getToken } = useAuth();
+  const [autofixLoading, setAutofixLoading] = useState(false);
+  const [autofixError, setAutofixError] = useState<string | null>(null);
+
   if (!issue) return null;
+
+  async function handleAutofix() {
+    if (!scanId) return;
+    setAutofixLoading(true);
+    setAutofixError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+      const result = await createAutofixPr(token, scanId, issue.id);
+      onAutofix?.(issue, result.pr_url);
+      window.open(result.pr_url, "_blank");
+    } catch (err) {
+      setAutofixError(err instanceof Error ? err.message : "Auto-fix failed");
+    } finally {
+      setAutofixLoading(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -128,6 +154,27 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           <Section title="Business Risk" content={issue.business_risk} warn />
         )}
         <Section title="Fix" content={issue.fix_recommendation} highlight />
+
+        {issue.autofix_pr_url && (
+          <div className="mt-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Auto-fix PR</p>
+            <a
+              href={issue.autofix_pr_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm text-emerald-400 underline"
+            >
+              View pull request on GitHub
+            </a>
+          </div>
+        )}
+
+        {autofixError && (
+          <p className="mt-4 rounded-lg border border-red-900 bg-red-950/50 p-3 text-sm text-red-300">
+            {autofixError}
+          </p>
+        )}
+
         <Section
           title="Priority"
           content={`Severity: ${issue.severity.toUpperCase()} · Confidence: ${issue.confidence}${
@@ -153,15 +200,27 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
             {issue.dismissed_reason && ` — ${issue.dismissed_reason}`}
           </p>
         ) : (
-          onDismiss && (
-            <button
-              type="button"
-              onClick={() => onDismiss(issue)}
-              className="mt-6 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-            >
-              Dismiss as false positive
-            </button>
-          )
+          <div className="mt-4 flex flex-wrap gap-3">
+            {issue.autofixable && scanId && (
+              <button
+                type="button"
+                onClick={handleAutofix}
+                disabled={autofixLoading}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {autofixLoading ? "Opening PR…" : "Create Fix PR on GitHub"}
+              </button>
+            )}
+            {onDismiss && (
+              <button
+                type="button"
+                onClick={() => onDismiss(issue)}
+                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+              >
+                Dismiss as false positive
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

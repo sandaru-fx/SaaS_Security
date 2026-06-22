@@ -38,6 +38,8 @@ from app.services import api_key_service, project_service
 from app.services.enterprise_service import has_api_access, has_enterprise
 from app.services.schedule_service import compute_next_run
 
+MAX_TEAM_MEMBERS = 5
+
 router = APIRouter(prefix="/enterprise", tags=["enterprise"])
 
 
@@ -109,6 +111,24 @@ async def invite_member(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    count_result = await db.execute(
+        select(OrganizationMember).where(OrganizationMember.organization_id == org_id)
+    )
+    if len(list(count_result.scalars().all())) >= MAX_TEAM_MEMBERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Team plan allows up to {MAX_TEAM_MEMBERS} members per organization.",
+        )
+
+    dup = await db.execute(
+        select(OrganizationMember).where(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.invited_email == payload.email,
+        )
+    )
+    if dup.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Member already invited")
+
     user_result = await db.execute(select(User).where(User.email == payload.email))
     invited_user = user_result.scalar_one_or_none()
 
@@ -135,6 +155,28 @@ async def list_members(
         select(OrganizationMember).where(OrganizationMember.organization_id == org_id)
     )
     return list(result.scalars().all())
+
+
+@router.delete("/organizations/{org_id}/members/{member_id}", status_code=204)
+async def remove_member(
+    org_id: UUID,
+    member_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    _require_enterprise(current_user)
+    org = await db.get(Organization, org_id)
+    if not org or org.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    member = await db.get(OrganizationMember, member_id)
+    if not member or member.organization_id != org_id:
+        raise HTTPException(status_code=404, detail="Member not found")
+    if member.user_id == current_user.id and member.role == "owner":
+        raise HTTPException(status_code=400, detail="Owner cannot remove themselves")
+
+    await db.delete(member)
+    await db.commit()
 
 
 @router.post("/api-keys", response_model=ApiKeyCreatedResponse, status_code=201)
