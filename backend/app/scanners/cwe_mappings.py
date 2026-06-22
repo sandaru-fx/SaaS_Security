@@ -206,6 +206,20 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "cloud-gcp-auth-failed": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
     "cloud-gcp-bucket-public-iam": ("CWE-284", "A01:2021 - Broken Access Control"),
     "cloud-gcp-bucket-legacy-acl": ("CWE-284", "A01:2021 - Broken Access Control"),
+    # Supply chain hardening
+    "supply-typosquat-npm": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-typosquat-pypi": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-malicious-package-known": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-sigstore-missing-ci": ("CWE-494", "A08:2021 - Software and Data Integrity Failures"),
+    "supply-slsa-provenance-missing": ("CWE-494", "A08:2021 - Software and Data Integrity Failures"),
+    "supply-docker-no-digest": ("CWE-494", "A08:2021 - Software and Data Integrity Failures"),
+    "supply-missing-lockfile": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-dependency-confusion": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-pip-no-hashes": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-risky-lifecycle-script": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-dependency-install-script": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-unpinned-github-action": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
+    "supply-unpinned-github-action-tag": ("CWE-1357", "A06:2021 - Vulnerable and Outdated Components"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

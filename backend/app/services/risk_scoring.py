@@ -240,6 +240,9 @@ def _compute_risk_score(
     elif issue.scanner == "cloud-cspm":
         score += 12
         factors.append("cloud_misconfig")
+    elif issue.scanner == "supply-chain":
+        score += 10
+        factors.append("supply_chain_risk")
     elif internet_exposed and issue.category in ("security", "secrets"):
         score += 4
         factors.append("live_target")
@@ -267,6 +270,16 @@ def _compute_risk_score(
     if issue.rule_id in _CRITICAL_CLOUD_RULES:
         score += 15
         factors.append("critical_cloud_exposure")
+
+    _CRITICAL_SUPPLY_RULES = {
+        "supply-malicious-package-known",
+        "supply-dependency-install-script",
+        "supply-typosquat-npm",
+        "supply-typosquat-pypi",
+    }
+    if issue.rule_id in _CRITICAL_SUPPLY_RULES:
+        score += 18
+        factors.append("supply_chain_critical")
 
     if issue.scanner in ("graphql-security", "websocket-security"):
         score += 6
@@ -302,6 +315,13 @@ def _is_fix_now(score: int, issue: Issue, kev_listed: bool) -> bool:
         "cloud-aws-rds-public",
         "cloud-azure-storage-public-blob",
         "cloud-gcp-bucket-public-iam",
+    ):
+        return True
+    if issue.rule_id in (
+        "supply-malicious-package-known",
+        "supply-dependency-install-script",
+        "supply-typosquat-npm",
+        "supply-typosquat-pypi",
     ):
         return True
     if score >= 75:

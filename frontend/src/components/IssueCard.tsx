@@ -121,6 +121,11 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             Browser DAST
           </span>
         )}
+        {issue.scanner === "supply-chain" && (
+          <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-medium text-amber-300">
+            Supply Chain
+          </span>
+        )}
         {issue.validated === "inactive" && (
           <span
             className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"

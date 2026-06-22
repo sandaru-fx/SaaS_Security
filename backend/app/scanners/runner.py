@@ -19,6 +19,7 @@ from app.scanners.secret_validator import is_validation_enabled, validate_secret
 from app.scanners.secrets import scan_secrets
 from app.scanners.security import scan_security_patterns
 from app.scanners.semgrep_scanner import scan_semgrep
+from app.scanners.supply_chain import scan_supply_chain
 from app.scanners.taint_analysis import scan_taint
 from app.scanners.websocket_scanner import scan_websocket_static
 
@@ -75,6 +76,11 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
         if any(f.metadata.get("reachable") for f in dep_findings):
             scanners_used.append("reachability")
     all_findings.extend(dep_findings)
+
+    supply_findings = scan_supply_chain(project_dir)
+    if supply_findings:
+        scanners_used.append("supply-chain")
+        all_findings.extend(supply_findings)
 
     arch_findings = scan_architecture(project_dir)
     scanners_used.append("architecture")
