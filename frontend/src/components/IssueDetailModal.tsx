@@ -32,10 +32,23 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           <Badge label={issue.severity} />
           {issue.priority != null && <Badge label={`Priority ${issue.priority}`} />}
           {issue.report_category && <Badge label={issue.report_category} />}
+          {issue.ai_triage_verdict && (
+            <Badge
+              label={issue.ai_triage_verdict.replace(/_/g, " ")}
+              warn={issue.ai_triage_verdict === "likely_false_positive"}
+            />
+          )}
           {issue.cwe_id && <Badge label={issue.cwe_id} />}
           {issue.owasp_category && <Badge label={issue.owasp_category} />}
           <Badge label={issue.scanner} />
         </div>
+
+        {issue.ai_triage_reason && (
+          <Section title="AI Triage" content={issue.ai_triage_reason} warn />
+        )}
+        {issue.ai_fix_suggestion && (
+          <Section title="Suggested Fix (AI)" content={issue.ai_fix_suggestion} highlight />
+        )}
 
         <Section title="Problem" content={issue.description} />
         <Section title="Impact" content={issue.impact} />
@@ -103,9 +116,15 @@ function Section({
   );
 }
 
-function Badge({ label }: { label: string }) {
+function Badge({ label, warn = false }: { label: string; warn?: boolean }) {
   return (
-    <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs capitalize text-zinc-300">
+    <span
+      className={`rounded-full border px-2.5 py-1 text-xs capitalize ${
+        warn
+          ? "border-amber-500/40 text-amber-300"
+          : "border-zinc-700 text-zinc-300"
+      }`}
+    >
       {label}
     </span>
   );

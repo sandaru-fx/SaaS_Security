@@ -81,7 +81,20 @@ export type ApiIssue = {
   dismissed_reason: string | null;
   cwe_id: string | null;
   owasp_category: string | null;
+  ai_triage_verdict: string | null;
+  ai_triage_reason: string | null;
+  ai_fix_suggestion: string | null;
   created_at: string;
+};
+
+export type AuditChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AuditChatResponse = {
+  reply: string;
+  provider: string;
 };
 
 export type CategoryScore = {
@@ -358,6 +371,17 @@ export async function listScanIssues(
 
 export async function getAuditReport(token: string, scanId: string): Promise<AuditReport> {
   return apiFetch<AuditReport>(`/api/scans/${scanId}/report`, token);
+}
+
+export async function chatWithAudit(
+  token: string,
+  scanId: string,
+  data: { message: string; history?: AuditChatMessage[] },
+): Promise<AuditChatResponse> {
+  return apiFetch<AuditChatResponse>(`/api/scans/${scanId}/chat`, token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getDashboard(token: string): Promise<DashboardData> {

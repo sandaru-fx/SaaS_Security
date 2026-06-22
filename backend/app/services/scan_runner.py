@@ -94,6 +94,10 @@ def execute_scan(scan_id: str) -> None:
         allow_deep = has_feature(user, "deep_audit") if user else False
         enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
 
+        from app.services.ai_triage import run_ai_triage
+
+        run_ai_triage(scan, issues, project=project, allow_deep_audit=allow_deep)
+
         scan.scanners_used = ",".join(scanners_used)
         scan.status = "completed"
         scan.completed_at = datetime.now(timezone.utc)

@@ -17,6 +17,7 @@ import logging
 from app.config import get_settings
 from app.models.issue import Issue
 from app.models.scan import Scan
+from app.services.cwe_knowledge import cwe_context
 from app.services.report_service import (
     calculate_category_scores,
     map_issue_category,
@@ -171,10 +172,13 @@ def _build_ai_prompt(scan: Scan, issues: list[Issue]) -> str:
     ]
     for i, issue in enumerate(top, start=1):
         location = issue.file_path or "project"
+        extra = issue.extra_data or {}
+        cwe = extra.get("cwe_id")
+        cwe_line = f" CWE: {cwe_context(cwe)}" if cwe else ""
         lines.append(
             f"{i}. [{issue.severity}] {issue.title} "
             f"({map_issue_category(issue.category)}) in {location} — "
-            f"{issue.description[:160]}"
+            f"{issue.description[:160]}{cwe_line}"
         )
     return "\n".join(lines)
 

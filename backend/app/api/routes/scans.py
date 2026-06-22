@@ -11,6 +11,8 @@ from app.database import get_db
 from app.models.issue import Issue
 from app.models.user import User
 from app.schemas.scan import (
+    AuditChatRequest,
+    AuditChatResponse,
     AuditReportResponse,
     IssueListResponse,
     IssueResponse,
@@ -175,3 +177,35 @@ async def download_audit_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.post("/scans/{scan_id}/chat", response_model=AuditChatResponse)
+async def chat_with_audit(
+    scan_id: UUID,
+    payload: AuditChatRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AuditChatResponse:
+    scan = await scan_service.get_scan(db, current_user.id, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if scan.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chat is available only for completed audits.",
+        )
+
+    result = await db.execute(select(Issue).where(Issue.scan_id == scan_id))
+    issues = list(result.scalars().all())
+
+    from app.services.ai_chat import chat_with_audit as run_chat
+
+    allow_deep = has_feature(current_user, "deep_audit")
+    response = run_chat(
+        scan,
+        issues,
+        payload.message,
+        [m.model_dump() for m in payload.history],
+        allow_deep_audit=allow_deep,
+    )
+    return AuditChatResponse(**response)

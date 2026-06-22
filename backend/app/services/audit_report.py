@@ -46,6 +46,9 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         dismissed_reason=issue.dismissed_reason,
         cwe_id=extra.get("cwe_id"),
         owasp_category=extra.get("owasp_category"),
+        ai_triage_verdict=extra.get("ai_triage_verdict"),
+        ai_triage_reason=extra.get("ai_triage_reason"),
+        ai_fix_suggestion=extra.get("ai_fix_suggestion"),
         created_at=issue.created_at,
     )
 
@@ -67,6 +70,11 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         user = await db.get(User, scan.user_id)
         allow_deep = has_feature(user, "deep_audit") if user else False
         enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
+        from app.services.ai_triage import run_ai_triage
+        from app.models.project import Project
+
+        project = await db.get(Project, scan.project_id)
+        run_ai_triage(scan, issues, project=project, allow_deep_audit=allow_deep)
         needs_commit = True
 
     if needs_commit:
