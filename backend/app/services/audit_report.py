@@ -51,6 +51,9 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         ai_triage_verdict=extra.get("ai_triage_verdict"),
         ai_triage_reason=extra.get("ai_triage_reason"),
         ai_fix_suggestion=extra.get("ai_fix_suggestion"),
+        reachable=extra.get("reachable"),
+        reachable_files=extra.get("reachable_files"),
+        taint_verified=str(extra.get("taint_verified", "")).lower() == "true",
         created_at=issue.created_at,
     )
 

@@ -65,6 +65,26 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "api-no-rate-limit": ("CWE-770", "API4:2023 - Unrestricted Resource Consumption"),
     "api-function-level-auth": ("CWE-285", "API5:2023 - Broken Function Level Authorization"),
     "api-http-base-url": ("CWE-319", "A02:2021 - Cryptographic Failures"),
+    # Taint analysis (Python)
+    "taint-py-sqli": ("CWE-89", "A03:2021 - Injection"),
+    "taint-py-cmd-injection": ("CWE-78", "A03:2021 - Injection"),
+    "taint-py-code-injection": ("CWE-94", "A03:2021 - Injection"),
+    "taint-py-path-traversal": ("CWE-22", "A01:2021 - Broken Access Control"),
+    "taint-py-ssrf": ("CWE-918", "A10:2021 - Server-Side Request Forgery"),
+    "taint-py-open-redirect": ("CWE-601", "A01:2021 - Broken Access Control"),
+    "taint-py-ssti": ("CWE-94", "A03:2021 - Injection"),
+    "taint-py-pickle": ("CWE-502", "A08:2021 - Software and Data Integrity Failures"),
+    "taint-py-yaml-load": ("CWE-502", "A08:2021 - Software and Data Integrity Failures"),
+    # Taint analysis (JS/TS)
+    "taint-js-xss-innerhtml": ("CWE-79", "A03:2021 - Injection"),
+    "taint-js-xss-outerhtml": ("CWE-79", "A03:2021 - Injection"),
+    "taint-js-react-dangerous-html": ("CWE-79", "A03:2021 - Injection"),
+    "taint-js-document-write": ("CWE-79", "A03:2021 - Injection"),
+    "taint-js-code-injection": ("CWE-94", "A03:2021 - Injection"),
+    "taint-js-sqli": ("CWE-89", "A03:2021 - Injection"),
+    "taint-js-cmd-injection": ("CWE-78", "A03:2021 - Injection"),
+    "taint-js-open-redirect": ("CWE-601", "A01:2021 - Broken Access Control"),
+    "taint-js-path-traversal": ("CWE-22", "A01:2021 - Broken Access Control"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

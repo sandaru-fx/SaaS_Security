@@ -12,9 +12,11 @@ from app.scanners.git_history import scan_git_history
 from app.scanners.iac_scanner import scan_iac
 from app.scanners.performance import scan_performance
 from app.scanners.quality import scan_quality
+from app.scanners.reachability import annotate_reachability
 from app.scanners.secrets import scan_secrets
 from app.scanners.security import scan_security_patterns
 from app.scanners.semgrep_scanner import scan_semgrep
+from app.scanners.taint_analysis import scan_taint
 
 
 def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
@@ -51,9 +53,17 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
         scanners_used.append("semgrep")
         all_findings.extend(semgrep_findings)
 
+    taint_findings = scan_taint(project_dir)
+    if taint_findings:
+        scanners_used.append("taint-analysis")
+        all_findings.extend(taint_findings)
+
     dep_findings = scan_dependencies(project_dir)
     if dep_findings:
         scanners_used.append("osv")
+        dep_findings = annotate_reachability(dep_findings, project_dir)
+        if any(f.metadata.get("reachable") for f in dep_findings):
+            scanners_used.append("reachability")
     all_findings.extend(dep_findings)
 
     arch_findings = scan_architecture(project_dir)

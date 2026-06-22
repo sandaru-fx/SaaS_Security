@@ -76,6 +76,9 @@ class IssueResponse(BaseModel):
     ai_triage_verdict: str | None = None
     ai_triage_reason: str | None = None
     ai_fix_suggestion: str | None = None
+    reachable: str | None = None
+    reachable_files: str | None = None
+    taint_verified: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
