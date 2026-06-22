@@ -632,6 +632,12 @@ function ActiveDastPanel({
           ? "Toggle live attack-style probes (XSS / SQLi / open-redirect / path-traversal / verbose errors / CORS) and optionally provide credentials so probes run as a logged-in user."
           : "Provide credentials so OWASP API Top 10 tests can reach authenticated endpoints (BOLA, function-level auth, mass assignment, rate limiting)."}
       </p>
+      {project.domain_verified && (
+        <p className="mt-2 text-xs text-cyan-300/80">
+          GraphQL + WebSocket security scans also run on verified domains (introspection, origin
+          validation, batching, message injection).
+        </p>
+      )}
 
       {project.source_type === "website" && (
         <label className="mt-4 flex items-center gap-3">

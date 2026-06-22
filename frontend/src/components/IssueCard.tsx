@@ -106,6 +106,16 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             VALIDATED ACTIVE
           </span>
         )}
+        {issue.scanner === "graphql-security" && (
+          <span className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 font-medium text-cyan-300">
+            GraphQL
+          </span>
+        )}
+        {issue.scanner === "websocket-security" && (
+          <span className="rounded border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 font-medium text-sky-300">
+            WebSocket
+          </span>
+        )}
         {issue.validated === "inactive" && (
           <span
             className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"

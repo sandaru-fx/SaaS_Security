@@ -10,6 +10,7 @@ from app.scanners.dependencies import scan_dependencies
 from app.scanners.devops import scan_devops
 from app.scanners.entropy_secrets import scan_entropy_secrets
 from app.scanners.git_history import scan_git_history
+from app.scanners.graphql_scanner import scan_graphql_static
 from app.scanners.iac_scanner import scan_iac
 from app.scanners.performance import scan_performance
 from app.scanners.quality import scan_quality
@@ -19,6 +20,7 @@ from app.scanners.secrets import scan_secrets
 from app.scanners.security import scan_security_patterns
 from app.scanners.semgrep_scanner import scan_semgrep
 from app.scanners.taint_analysis import scan_taint
+from app.scanners.websocket_scanner import scan_websocket_static
 
 
 def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
@@ -99,6 +101,16 @@ def run_all_scanners(project_dir: Path) -> tuple[list[ScanFinding], list[str]]:
     if crypto_findings:
         scanners_used.append("crypto-weakness")
         all_findings.extend(crypto_findings)
+
+    gql_static = scan_graphql_static(project_dir)
+    if gql_static:
+        scanners_used.append("graphql-security")
+        all_findings.extend(gql_static)
+
+    ws_static = scan_websocket_static(project_dir)
+    if ws_static:
+        scanners_used.append("websocket-security")
+        all_findings.extend(ws_static)
 
     all_findings = [
         enrich_finding_tags(f) for f in deduplicate_findings(all_findings)
