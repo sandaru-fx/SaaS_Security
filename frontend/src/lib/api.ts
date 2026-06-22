@@ -108,6 +108,74 @@ export type AuditReport = {
 export type ScanListResponse = { scans: ApiScan[]; total: number };
 export type IssueListResponse = { issues: ApiIssue[]; total: number };
 
+export type DashboardStats = {
+  total_projects: number;
+  ready_projects: number;
+  total_scans: number;
+  completed_scans: number;
+  average_health_score: number | null;
+  best_health_score: number | null;
+  score_change: number | null;
+};
+
+export type RecentScanItem = {
+  scan_id: string;
+  project_id: string;
+  project_name: string;
+  status: ScanStatus;
+  health_score: number | null;
+  grade: string | null;
+  total_issues: number;
+  critical_count: number;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type TrendPoint = {
+  scan_id: string;
+  project_id: string;
+  project_name: string;
+  health_score: number;
+  grade: string | null;
+  completed_at: string;
+};
+
+export type CategoryAverage = {
+  category: string;
+  score: number;
+  project_count: number;
+};
+
+export type ActiveScanItem = {
+  scan_id: string;
+  project_id: string;
+  project_name: string;
+  status: ScanStatus;
+  created_at: string;
+};
+
+export type DashboardData = {
+  stats: DashboardStats;
+  recent_scans: RecentScanItem[];
+  score_trend: TrendPoint[];
+  category_averages: CategoryAverage[];
+  active_scans: ActiveScanItem[];
+};
+
+export type ScanCompareResult = {
+  project_id: string;
+  base_scan: ApiScan;
+  target_scan: ApiScan;
+  score_delta: number | null;
+  issues_delta: number;
+  critical_delta: number;
+  high_delta: number;
+  medium_delta: number;
+  low_delta: number;
+  category_deltas: Record<string, number | null>;
+  improved: boolean;
+};
+
 export async function apiFetch<T>(
   path: string,
   token: string,
@@ -231,4 +299,21 @@ export async function listScanIssues(
 
 export async function getAuditReport(token: string, scanId: string): Promise<AuditReport> {
   return apiFetch<AuditReport>(`/api/scans/${scanId}/report`, token);
+}
+
+export async function getDashboard(token: string): Promise<DashboardData> {
+  return apiFetch<DashboardData>("/api/dashboard", token);
+}
+
+export async function compareScans(
+  token: string,
+  projectId: string,
+  baseScanId: string,
+  targetScanId: string,
+): Promise<ScanCompareResult> {
+  const params = new URLSearchParams({ base: baseScanId, target: targetScanId });
+  return apiFetch<ScanCompareResult>(
+    `/api/dashboard/projects/${projectId}/scans/compare?${params}`,
+    token,
+  );
 }

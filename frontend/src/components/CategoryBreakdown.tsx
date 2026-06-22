@@ -12,7 +12,13 @@ const labels: Record<string, string> = {
   devops: "DevOps",
 };
 
-export function CategoryBreakdown({ categories }: { categories: CategoryScore[] }) {
+export function CategoryBreakdown({
+  categories,
+  countLabel = "issues",
+}: {
+  categories: CategoryScore[];
+  countLabel?: string;
+}) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       {categories.map((cat) => (
@@ -28,7 +34,9 @@ export function CategoryBreakdown({ categories }: { categories: CategoryScore[] 
               style={{ width: `${cat.score}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-zinc-600">{cat.issue_count} issues</p>
+          <p className="mt-2 text-xs text-zinc-600">
+            {cat.issue_count} {countLabel}
+          </p>
         </div>
       ))}
     </div>

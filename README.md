@@ -73,6 +73,15 @@ SaaS_2/
 - [x] All 5 audit categories now populated by dedicated scanners
 - [x] Extended category filters in scan results UI
 
+### Phase 8 — Dashboard, History & Trends
+- [x] Dashboard API with stats, recent scans, score trend, category averages
+- [x] Score trend chart (SVG) on main dashboard
+- [x] Recent audits list across all projects
+- [x] Active scan notifications (in-app banner + completion alert)
+- [x] Scan history with health scores on project page
+- [x] Compare scans — before vs after with score and category deltas
+- [x] Project settings — rename and update description
+
 ## AI Auditor (Phase 6)
 
 The AI Auditor turns raw findings into executive-friendly narratives.
