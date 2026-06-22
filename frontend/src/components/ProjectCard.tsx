@@ -16,6 +16,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   local: "Local Path",
   website: "Website",
   api: "REST API",
+  cloud: "Cloud CSPM",
 };
 
 export function ProjectCard({ project }: { project: ApiProject }) {
@@ -72,6 +73,11 @@ export function ProjectCard({ project }: { project: ApiProject }) {
         {project.asm_enabled && (
           <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
             ASM Recon
+          </span>
+        )}
+        {project.source_type === "cloud" && project.cloud_provider && (
+          <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 font-medium uppercase text-sky-300">
+            {project.cloud_provider} CSPM
           </span>
         )}
       </div>

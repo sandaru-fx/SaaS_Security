@@ -180,6 +180,32 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "browser-prototype-pollution": ("CWE-1321", "A08:2021 - Software and Data Integrity Failures"),
     "browser-prototype-pollution-reflected": ("CWE-1321", "A08:2021 - Software and Data Integrity Failures"),
     "browser-console-verbose-error": ("CWE-209", "A05:2021 - Security Misconfiguration"),
+    # Cloud CSPM (AWS)
+    "cloud-aws-auth-failed": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-aws-summary-clean": ("CWE-200", "A05:2021 - Security Misconfiguration"),
+    "cloud-aws-s3-public-access-block": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-aws-s3-public-policy": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-aws-sg-open-sensitive-port": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-aws-rds-public": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-aws-cloudtrail-missing": ("CWE-778", "A09:2021 - Security Logging and Monitoring Failures"),
+    "cloud-aws-cloudtrail-not-logging": ("CWE-778", "A09:2021 - Security Logging and Monitoring Failures"),
+    "cloud-aws-iam-no-password-policy": ("CWE-521", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-aws-iam-weak-password-policy": ("CWE-521", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-aws-iam-admin-user": ("CWE-250", "A01:2021 - Broken Access Control"),
+    "cloud-aws-root-access-keys": ("CWE-521", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-aws-ebs-encryption-default-off": ("CWE-311", "A02:2021 - Cryptographic Failures"),
+    "cloud-aws-kms-rotation-disabled": ("CWE-326", "A02:2021 - Cryptographic Failures"),
+    # Cloud CSPM (Azure)
+    "cloud-azure-config-incomplete": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-azure-auth-failed": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-azure-storage-public-blob": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-azure-storage-http-allowed": ("CWE-319", "A02:2021 - Cryptographic Failures"),
+    "cloud-azure-nsg-open-port": ("CWE-284", "A01:2021 - Broken Access Control"),
+    # Cloud CSPM (GCP)
+    "cloud-gcp-config-incomplete": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-gcp-auth-failed": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    "cloud-gcp-bucket-public-iam": ("CWE-284", "A01:2021 - Broken Access Control"),
+    "cloud-gcp-bucket-legacy-acl": ("CWE-284", "A01:2021 - Broken Access Control"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

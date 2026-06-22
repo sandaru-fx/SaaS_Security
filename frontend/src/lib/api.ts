@@ -12,7 +12,8 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip" | "folder" | "local" | "website" | "api";
+export type SourceType = "github" | "zip" | "folder" | "local" | "website" | "api" | "cloud";
+export type CloudProvider = "aws" | "azure" | "gcp";
 
 export type AuthType = "none" | "bearer" | "basic" | "cookie" | "header";
 
@@ -45,6 +46,8 @@ export type ApiProject = {
   has_auth_configured?: boolean;
   asm_enabled?: boolean;
   asm_root_domain?: string | null;
+  cloud_provider?: CloudProvider | null;
+  has_cloud_configured?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -452,6 +455,30 @@ export async function createApiProject(
   },
 ): Promise<ApiProject> {
   return apiFetch<ApiProject>("/api/projects/api", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createCloudProject(
+  token: string,
+  data: {
+    name: string;
+    description?: string;
+    cloud_provider: CloudProvider;
+    ownership_confirmed: boolean;
+    aws_access_key_id?: string;
+    aws_secret_access_key?: string;
+    aws_region?: string;
+    aws_session_token?: string;
+    azure_tenant_id?: string;
+    azure_client_id?: string;
+    azure_client_secret?: string;
+    azure_subscription_id?: string;
+    gcp_service_account_json?: string;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/cloud", token, {
     method: "POST",
     body: JSON.stringify(data),
   });

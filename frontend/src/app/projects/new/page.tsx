@@ -8,7 +8,9 @@ import { AppHeader } from "@/components/AppHeader";
 import {
   AuthConfig,
   AuthType,
+  CloudProvider,
   createApiProject,
+  createCloudProject,
   createGithubProject,
   createLocalProject,
   createWebsiteProject,
@@ -17,7 +19,7 @@ import {
   uploadZipProject,
 } from "@/lib/api";
 
-type Tab = "github" | "folder" | "zip" | "local" | "website" | "api";
+type Tab = "github" | "folder" | "zip" | "local" | "website" | "api" | "cloud";
 
 export default function NewProjectPage() {
   const { getToken } = useAuth();
@@ -40,6 +42,16 @@ export default function NewProjectPage() {
   const [browserDastEnabled, setBrowserDastEnabled] = useState(false);
   const [asmEnabled, setAsmEnabled] = useState(false);
   const [apiSpecUrl, setApiSpecUrl] = useState("");
+  const [cloudProvider, setCloudProvider] = useState<CloudProvider>("aws");
+  const [awsAccessKeyId, setAwsAccessKeyId] = useState("");
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
+  const [awsRegion, setAwsRegion] = useState("us-east-1");
+  const [awsSessionToken, setAwsSessionToken] = useState("");
+  const [azureTenantId, setAzureTenantId] = useState("");
+  const [azureClientId, setAzureClientId] = useState("");
+  const [azureClientSecret, setAzureClientSecret] = useState("");
+  const [azureSubscriptionId, setAzureSubscriptionId] = useState("");
+  const [gcpServiceAccountJson, setGcpServiceAccountJson] = useState("");
 
   const [authType, setAuthType] = useState<AuthType>("none");
   const [authToken, setAuthToken] = useState("");
@@ -118,6 +130,27 @@ export default function NewProjectPage() {
           auth: buildAuthConfig(),
         });
         projectId = project.id;
+      } else if (tab === "cloud") {
+        if (!ownershipConfirmed) {
+          throw new Error("You must confirm you own or have permission to scan this cloud account");
+        }
+        const project = await createCloudProject(token, {
+          name,
+          description: description || undefined,
+          cloud_provider: cloudProvider,
+          ownership_confirmed: true,
+          aws_access_key_id: cloudProvider === "aws" ? awsAccessKeyId : undefined,
+          aws_secret_access_key: cloudProvider === "aws" ? awsSecretAccessKey : undefined,
+          aws_region: cloudProvider === "aws" ? awsRegion : undefined,
+          aws_session_token: cloudProvider === "aws" && awsSessionToken ? awsSessionToken : undefined,
+          azure_tenant_id: cloudProvider === "azure" ? azureTenantId : undefined,
+          azure_client_id: cloudProvider === "azure" ? azureClientId : undefined,
+          azure_client_secret: cloudProvider === "azure" ? azureClientSecret : undefined,
+          azure_subscription_id: cloudProvider === "azure" ? azureSubscriptionId : undefined,
+          gcp_service_account_json:
+            cloudProvider === "gcp" ? gcpServiceAccountJson : undefined,
+        });
+        projectId = project.id;
       } else if (tab === "folder") {
         if (folderFiles.length === 0) throw new Error("Please select a project folder");
         const project = await uploadFolderProject(token, {
@@ -172,7 +205,9 @@ export default function NewProjectPage() {
         ? "Verifying website..."
         : tab === "api"
           ? "Loading OpenAPI spec..."
-          : tab === "folder"
+          : tab === "cloud"
+            ? "Validating cloud credentials..."
+            : tab === "folder"
             ? "Uploading folder..."
             : tab === "local"
               ? "Linking local folder..."
@@ -189,7 +224,7 @@ export default function NewProjectPage() {
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight">Create Project</h1>
         <p className="mt-2 text-zinc-400">
-          Audit a folder, GitHub repo, ZIP, live website, or REST API.
+          Audit a folder, GitHub repo, ZIP, live website, REST API, or cloud account.
         </p>
         <p className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-200">
           Private GitHub repos are available on{" "}
@@ -219,6 +254,9 @@ export default function NewProjectPage() {
           </TabButton>
           <TabButton active={tab === "api"} onClick={() => setTab("api")}>
             API
+          </TabButton>
+          <TabButton active={tab === "cloud"} onClick={() => setTab("cloud")}>
+            Cloud
           </TabButton>
         </div>
 
@@ -463,6 +501,152 @@ export default function NewProjectPage() {
                 <span className="text-sm text-zinc-300">
                   I confirm I own this API or have explicit permission to run a security scan
                   against it. Domain verification of the API host is required before scanning.
+                </span>
+              </label>
+            </>
+          ) : tab === "cloud" ? (
+            <>
+              <p className="rounded-lg border border-sky-500/20 bg-sky-950/20 px-4 py-3 text-sm text-sky-200">
+                Cloud CSPM-lite runs <strong>read-only</strong> misconfiguration checks on AWS,
+                Azure, or GCP. Requires{" "}
+                <a href="/billing" className="font-medium text-sky-300 underline">
+                  Pro or Team plan
+                </a>
+                . Use a dedicated read-only IAM role / service principal — never root keys.
+              </p>
+
+              <Field label="Cloud Provider" required>
+                <select
+                  value={cloudProvider}
+                  onChange={(e) => setCloudProvider(e.target.value as CloudProvider)}
+                  className={inputClass}
+                >
+                  <option value="aws">Amazon Web Services (AWS)</option>
+                  <option value="azure">Microsoft Azure</option>
+                  <option value="gcp">Google Cloud Platform (GCP)</option>
+                </select>
+              </Field>
+
+              {cloudProvider === "aws" && (
+                <>
+                  <Field label="AWS Access Key ID" required>
+                    <input
+                      type="text"
+                      required
+                      value={awsAccessKeyId}
+                      onChange={(e) => setAwsAccessKeyId(e.target.value)}
+                      placeholder="AKIA..."
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="AWS Secret Access Key" required>
+                    <input
+                      type="password"
+                      required
+                      value={awsSecretAccessKey}
+                      onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="AWS Region">
+                    <input
+                      type="text"
+                      value={awsRegion}
+                      onChange={(e) => setAwsRegion(e.target.value)}
+                      placeholder="us-east-1"
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Session Token (optional, for STS)">
+                    <input
+                      type="password"
+                      value={awsSessionToken}
+                      onChange={(e) => setAwsSessionToken(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <p className="text-xs text-zinc-500">
+                    Recommended: IAM user or role with SecurityAudit + ReadOnlyAccess policies.
+                    Checks S3 public access, open security groups, public RDS, CloudTrail, IAM
+                    hygiene, EBS encryption, KMS rotation.
+                  </p>
+                </>
+              )}
+
+              {cloudProvider === "azure" && (
+                <>
+                  <Field label="Tenant ID" required>
+                    <input
+                      type="text"
+                      required
+                      value={azureTenantId}
+                      onChange={(e) => setAzureTenantId(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Client ID (App ID)" required>
+                    <input
+                      type="text"
+                      required
+                      value={azureClientId}
+                      onChange={(e) => setAzureClientId(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Client Secret" required>
+                    <input
+                      type="password"
+                      required
+                      value={azureClientSecret}
+                      onChange={(e) => setAzureClientSecret(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Subscription ID" required>
+                    <input
+                      type="text"
+                      required
+                      value={azureSubscriptionId}
+                      onChange={(e) => setAzureSubscriptionId(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <p className="text-xs text-zinc-500">
+                    Recommended: service principal with Reader role on the subscription. Checks
+                    storage public blob access, HTTP-only storage, and NSG rules open to internet.
+                  </p>
+                </>
+              )}
+
+              {cloudProvider === "gcp" && (
+                <>
+                  <Field label="Service Account JSON" required>
+                    <textarea
+                      required
+                      value={gcpServiceAccountJson}
+                      onChange={(e) => setGcpServiceAccountJson(e.target.value)}
+                      placeholder='{"type": "service_account", ...}'
+                      rows={8}
+                      className={`${inputClass} font-mono text-xs`}
+                    />
+                  </Field>
+                  <p className="text-xs text-zinc-500">
+                    Paste the full JSON key for a service account with Storage Object Viewer and
+                    Security Reviewer roles. Checks public GCS bucket IAM and legacy ACL usage.
+                  </p>
+                </>
+              )}
+
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                <input
+                  type="checkbox"
+                  checked={ownershipConfirmed}
+                  onChange={(e) => setOwnershipConfirmed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  I confirm I own this cloud account or have explicit permission to run read-only
+                  security configuration checks against it.
                 </span>
               </label>
             </>
