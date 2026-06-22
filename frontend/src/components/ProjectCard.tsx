@@ -1,12 +1,20 @@
 import Link from "next/link";
 
-import { ApiProject } from "@/lib/api";
+import { ApiProject, SourceType } from "@/lib/api";
 
 const statusStyles: Record<ApiProject["status"], string> = {
   pending: "bg-zinc-600",
   processing: "bg-amber-500",
   ready: "bg-emerald-500",
   failed: "bg-red-500",
+};
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  github: "GitHub",
+  zip: "ZIP Upload",
+  folder: "Local Folder",
+  local: "Local Path",
+  website: "Website",
 };
 
 export function ProjectCard({ project }: { project: ApiProject }) {
@@ -30,11 +38,7 @@ export function ProjectCard({ project }: { project: ApiProject }) {
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">
-          {project.source_type === "github"
-            ? "GitHub"
-            : project.source_type === "website"
-              ? "Website"
-              : "ZIP Upload"}
+          {SOURCE_LABELS[project.source_type] ?? project.source_type}
         </span>
         {project.file_count > 0 && (
           <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">

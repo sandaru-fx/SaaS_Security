@@ -12,7 +12,7 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip" | "website";
+export type SourceType = "github" | "zip" | "folder" | "local" | "website";
 
 export type ApiProject = {
   id: string;
@@ -339,6 +339,52 @@ export async function uploadZipProject(
     method: "POST",
     body: formData,
   });
+}
+
+export async function uploadFolderProject(
+  token: string,
+  data: { name: string; files: File[]; description?: string },
+): Promise<ApiProject> {
+  const formData = new FormData();
+  formData.append("name", data.name);
+  if (data.description) {
+    formData.append("description", data.description);
+  }
+  for (const file of data.files) {
+    const relativePath = file.webkitRelativePath || file.name;
+    formData.append("files", file, relativePath);
+  }
+
+  const response = await fetch(`${API_URL}/api/projects/folder`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Folder upload failed" }));
+    const detail = error.detail;
+    throw new Error(typeof detail === "string" ? detail : "Folder upload failed");
+  }
+  return response.json();
+}
+
+export async function createLocalProject(
+  token: string,
+  data: { name: string; local_path: string; description?: string },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/local", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getApiFeatures(): Promise<{ local_project_paths: boolean }> {
+  const response = await fetch(`${API_URL}/api/health`);
+  if (!response.ok) {
+    return { local_project_paths: false };
+  }
+  const data = await response.json();
+  return data.features ?? { local_project_paths: false };
 }
 
 export async function createWebsiteProject(

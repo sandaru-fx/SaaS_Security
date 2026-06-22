@@ -10,6 +10,7 @@ from app.models.user import User
 from app.schemas.project import (
     DomainVerificationInfo,
     ProjectCreateGithub,
+    ProjectCreateLocal,
     ProjectCreateWebsite,
     ProjectListResponse,
     ProjectPrChecksUpdate,
@@ -78,6 +79,36 @@ async def upload_zip_project(
         project = await project_service.create_zip_project(
             db, current_user, name, file, description
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.post("/folder", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def upload_folder_project(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    name: Annotated[str, Form()],
+    files: Annotated[list[UploadFile], File()],
+    description: Annotated[str | None, Form()] = None,
+) -> ProjectResponse:
+    try:
+        project = await project_service.create_folder_project(
+            db, current_user, name, files, description
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.post("/local", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_local_project(
+    payload: ProjectCreateLocal,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    try:
+        project = await project_service.create_local_project(db, current_user, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return ProjectResponse.model_validate(project)

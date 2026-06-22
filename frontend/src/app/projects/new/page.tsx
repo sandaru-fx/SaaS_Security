@@ -2,26 +2,43 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { createGithubProject, createWebsiteProject, uploadZipProject } from "@/lib/api";
+import {
+  createGithubProject,
+  createLocalProject,
+  createWebsiteProject,
+  getApiFeatures,
+  uploadFolderProject,
+  uploadZipProject,
+} from "@/lib/api";
 
-type Tab = "github" | "zip" | "website";
+type Tab = "github" | "folder" | "zip" | "local" | "website";
 
 export default function NewProjectPage() {
   const { getToken } = useAuth();
-  const [tab, setTab] = useState<Tab>("github");
+  const [tab, setTab] = useState<Tab>("folder");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localPathsEnabled, setLocalPathsEnabled] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [branch, setBranch] = useState("main");
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [folderFiles, setFolderFiles] = useState<File[]>([]);
+  const [folderLabel, setFolderLabel] = useState("");
+  const [localPath, setLocalPath] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
+
+  useEffect(() => {
+    getApiFeatures().then((features) => {
+      setLocalPathsEnabled(features.local_project_paths);
+    });
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -53,6 +70,22 @@ export default function NewProjectPage() {
           ownership_confirmed: true,
         });
         projectId = project.id;
+      } else if (tab === "folder") {
+        if (folderFiles.length === 0) throw new Error("Please select a project folder");
+        const project = await uploadFolderProject(token, {
+          name,
+          files: folderFiles,
+          description: description || undefined,
+        });
+        projectId = project.id;
+      } else if (tab === "local") {
+        if (!localPath.trim()) throw new Error("Enter the full path to your project folder");
+        const project = await createLocalProject(token, {
+          name,
+          local_path: localPath.trim(),
+          description: description || undefined,
+        });
+        projectId = project.id;
       } else {
         if (!zipFile) throw new Error("Please select a ZIP file");
         const project = await uploadZipProject(token, {
@@ -70,6 +103,31 @@ export default function NewProjectPage() {
     }
   }
 
+  function handleFolderChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    setFolderFiles(files);
+    if (files.length > 0) {
+      const root = files[0].webkitRelativePath.split("/")[0];
+      setFolderLabel(root || `${files.length} files selected`);
+      if (!name.trim() && root) {
+        setName(root);
+      }
+    } else {
+      setFolderLabel("");
+    }
+  }
+
+  const loadingLabel =
+    tab === "github"
+      ? "Cloning repository..."
+      : tab === "website"
+        ? "Verifying website..."
+        : tab === "folder"
+          ? "Uploading folder..."
+          : tab === "local"
+            ? "Linking local folder..."
+            : "Uploading & extracting...";
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <AppHeader badge="New Project" />
@@ -81,7 +139,7 @@ export default function NewProjectPage() {
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight">Create Project</h1>
         <p className="mt-2 text-zinc-400">
-          Connect a GitHub repo, upload source code, or scan a live website URL.
+          Open a local folder, connect GitHub, upload a ZIP, or scan a live website.
         </p>
         <p className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-200">
           Private GitHub repos are available on{" "}
@@ -91,15 +149,23 @@ export default function NewProjectPage() {
           . Public repos work on the Free plan.
         </p>
 
-        <div className="mt-8 flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
+        <div className="mt-8 flex flex-wrap gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
+          <TabButton active={tab === "folder"} onClick={() => setTab("folder")}>
+            Open Folder
+          </TabButton>
+          {localPathsEnabled && (
+            <TabButton active={tab === "local"} onClick={() => setTab("local")}>
+              Local Path
+            </TabButton>
+          )}
           <TabButton active={tab === "github"} onClick={() => setTab("github")}>
-            GitHub Repo
+            GitHub
           </TabButton>
           <TabButton active={tab === "zip"} onClick={() => setTab("zip")}>
-            ZIP Upload
+            ZIP
           </TabButton>
           <TabButton active={tab === "website"} onClick={() => setTab("website")}>
-            Website URL
+            Website
           </TabButton>
         </div>
 
@@ -125,7 +191,48 @@ export default function NewProjectPage() {
             />
           </Field>
 
-          {tab === "github" ? (
+          {tab === "folder" ? (
+            <Field label="Project Folder" required>
+              <input
+                type="file"
+                required
+                // @ts-expect-error webkitdirectory is supported by Chromium browsers
+                webkitdirectory=""
+                directory=""
+                multiple
+                onChange={handleFolderChange}
+                className="w-full text-sm text-zinc-400 file:mr-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-zinc-950"
+              />
+              {folderLabel && (
+                <p className="mt-2 text-sm text-emerald-300">
+                  Selected: <span className="font-mono">{folderLabel}</span> ({folderFiles.length}{" "}
+                  files)
+                </p>
+              )}
+              <p className="mt-2 text-xs text-zinc-500">
+                Pick any folder on your PC — like opening a project in VS Code. Skips{" "}
+                <code className="text-zinc-400">node_modules</code> and{" "}
+                <code className="text-zinc-400">.git</code> automatically. Max 50MB total.
+              </p>
+            </Field>
+          ) : tab === "local" ? (
+            <>
+              <Field label="Folder Path on This Machine" required>
+                <input
+                  type="text"
+                  required
+                  value={localPath}
+                  onChange={(e) => setLocalPath(e.target.value)}
+                  placeholder="C:\Users\User\Desktop\MyProject"
+                  className={inputClass}
+                />
+              </Field>
+              <p className="text-xs text-zinc-500">
+                Local dev only — backend reads files directly from disk (no upload). Scans always
+                use the latest files in that folder.
+              </p>
+            </>
+          ) : tab === "github" ? (
             <>
               <Field label="GitHub URL" required>
                 <input
@@ -146,9 +253,6 @@ export default function NewProjectPage() {
                   className={inputClass}
                 />
               </Field>
-              <p className="text-xs text-zinc-500">
-                Only public GitHub repositories are supported in this version.
-              </p>
             </>
           ) : tab === "website" ? (
             <>
@@ -174,10 +278,6 @@ export default function NewProjectPage() {
                   scan against it.
                 </span>
               </label>
-              <p className="text-xs text-zinc-500">
-                Passive checks only: security headers, TLS, cookies, exposed paths, and info
-                leaks. No exploitation.
-              </p>
             </>
           ) : (
             <Field label="ZIP File" required>
@@ -203,13 +303,7 @@ export default function NewProjectPage() {
             disabled={loading}
             className="w-full rounded-lg bg-emerald-500 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-50"
           >
-            {loading
-              ? tab === "github"
-                ? "Cloning repository..."
-                : tab === "website"
-                  ? "Verifying website..."
-                  : "Uploading & extracting..."
-              : "Create Project"}
+            {loading ? loadingLabel : "Create Project"}
           </button>
         </form>
       </main>
@@ -233,10 +327,8 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
-        active
-          ? "bg-emerald-500 text-zinc-950"
-          : "text-zinc-400 hover:text-zinc-200"
+      className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+        active ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
       }`}
     >
       {children}

@@ -12,6 +12,7 @@ import {
   ApiScan,
   DomainVerificationInfo,
   ScanCompareResult,
+  SourceType,
   compareScans,
   deleteProject,
   getDomainVerification,
@@ -22,6 +23,14 @@ import {
   updateProjectPrChecks,
   verifyDomain,
 } from "@/lib/api";
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  github: "GitHub",
+  zip: "ZIP Upload",
+  folder: "Local Folder",
+  local: "Local Path",
+  website: "Live Website",
+};
 
 const statusColors: Record<ApiProject["status"], string> = {
   pending: "text-zinc-400",
@@ -214,17 +223,17 @@ export default function ProjectDetailPage() {
             <div className="mt-8 space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
               <DetailRow
                 label="Source"
-                value={
-                  project.source_type === "github"
-                    ? "GitHub"
-                    : project.source_type === "website"
-                      ? "Live Website"
-                      : "ZIP Upload"
-                }
+                value={SOURCE_LABELS[project.source_type] ?? project.source_type}
               />
               {project.repo_url && (
                 <DetailRow
-                  label={project.source_type === "website" ? "Website URL" : "Repository"}
+                  label={
+                    project.source_type === "website"
+                      ? "Website URL"
+                      : project.source_type === "local"
+                        ? "Local Folder"
+                        : "Repository"
+                  }
                   value={project.repo_url}
                   mono
                 />

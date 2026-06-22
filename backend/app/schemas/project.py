@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 class SourceType(str, Enum):
     github = "github"
     zip = "zip"
+    folder = "folder"
+    local = "local"
     website = "website"
 
 
@@ -32,6 +34,12 @@ class ProjectCreateWebsite(BaseModel):
     ownership_confirmed: bool = Field(
         description="User confirms they own or have permission to scan this website"
     )
+
+
+class ProjectCreateLocal(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    local_path: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=2000)
 
 
 class ProjectUpdate(BaseModel):

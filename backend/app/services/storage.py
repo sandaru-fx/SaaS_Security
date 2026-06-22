@@ -63,3 +63,41 @@ def flatten_single_root_folder(project_dir: Path) -> None:
         for child in nested.iterdir():
             shutil.move(str(child), str(project_dir / child.name))
         shutil.rmtree(nested, ignore_errors=True)
+
+
+SKIP_UPLOAD_DIRS = {
+    "node_modules",
+    ".git",
+    "venv",
+    ".venv",
+    "__pycache__",
+    ".next",
+    "dist",
+    "build",
+    ".turbo",
+}
+
+
+def should_skip_upload_path(relative_path: str) -> bool:
+    parts = Path(relative_path.replace("\\", "/")).parts
+    return any(part in SKIP_UPLOAD_DIRS for part in parts)
+
+
+def save_uploaded_files(files: list[tuple[str, bytes]], dest_dir: Path) -> int:
+    """Save browser folder upload files with path-traversal protection."""
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_resolved = dest_dir.resolve()
+    saved = 0
+
+    for relative_path, content in files:
+        rel = relative_path.replace("\\", "/").lstrip("/")
+        if not rel or should_skip_upload_path(rel):
+            continue
+        target = (dest_dir / rel).resolve()
+        if not str(target).startswith(str(dest_resolved)):
+            raise ValueError("Unsafe file path detected in folder upload")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+        saved += 1
+
+    return saved

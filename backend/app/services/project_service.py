@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Project
 from app.models.user import User
-from app.schemas.project import ProjectCreateGithub, ProjectCreateWebsite, ProjectUpdate
+from app.schemas.project import ProjectCreateGithub, ProjectCreateLocal, ProjectCreateWebsite, ProjectUpdate
 from app.scanners.website_scanner import normalize_website_url, validate_website_url
 from app.services.github import build_github_headers, build_github_zipball_url, parse_github_url
 from app.services.domain_verification import generate_verification_token
@@ -20,6 +20,7 @@ from app.services.storage import (
     ensure_project_dir,
     flatten_single_root_folder,
     safe_extract_zip,
+    save_uploaded_files,
 )
 from app.config import get_settings
 
@@ -135,6 +136,123 @@ async def create_zip_project(
     return project
 
 
+async def create_folder_project(
+    db: AsyncSession,
+    user: User,
+    name: str,
+    uploads: list[UploadFile],
+    description: str | None = None,
+) -> Project:
+    if not uploads:
+        raise ValueError("No files selected. Choose a project folder to upload.")
+
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    total_bytes = 0
+    file_payloads: list[tuple[str, bytes]] = []
+
+    for upload in uploads:
+        relative_path = (upload.filename or "file").replace("\\", "/").strip()
+        if not relative_path:
+            continue
+        content = await upload.read()
+        total_bytes += len(content)
+        if total_bytes > max_bytes:
+            raise ValueError(f"Folder too large. Maximum size is {settings.max_upload_size_mb}MB")
+        file_payloads.append((relative_path, content))
+
+    if len(file_payloads) > settings.max_zip_files:
+        raise ValueError(f"Too many files (max {settings.max_zip_files})")
+
+    project = Project(
+        user_id=user.id,
+        name=name.strip(),
+        description=description,
+        source_type="folder",
+        status="processing",
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+
+    project_dir = ensure_project_dir(str(user.id), str(project.id))
+    project.storage_path = str(Path(settings.upload_dir) / str(user.id) / str(project.id))
+
+    try:
+        saved = save_uploaded_files(file_payloads, project_dir)
+        flatten_single_root_folder(project_dir)
+        project.file_count = count_project_files(project_dir)
+        if project.file_count == 0:
+            raise ValueError("No scannable files found in the selected folder")
+        project.status = "ready"
+        project.status_message = f"Uploaded {project.file_count} files from local folder ({saved} saved)"
+    except Exception as exc:
+        project.status = "failed"
+        project.status_message = str(exc)
+        delete_project_dir(str(user.id), str(project.id))
+
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+def _resolve_local_path(raw_path: str) -> Path:
+    if not settings.local_paths_enabled:
+        raise ValueError(
+            "Local folder paths are disabled in production. "
+            "Use Open Folder upload or set ALLOW_LOCAL_PROJECT_PATHS=true for local dev."
+        )
+
+    path = Path(raw_path.strip()).expanduser().resolve()
+    if not path.exists():
+        raise ValueError(f"Folder does not exist: {path}")
+    if not path.is_dir():
+        raise ValueError(f"Path is not a folder: {path}")
+
+    if settings.local_projects_root:
+        root = Path(settings.local_projects_root).expanduser().resolve()
+        if not str(path).startswith(str(root)):
+            raise ValueError(f"Folder must be under {root}")
+
+    return path
+
+
+async def create_local_project(
+    db: AsyncSession,
+    user: User,
+    payload: ProjectCreateLocal,
+) -> Project:
+    folder = _resolve_local_path(payload.local_path)
+
+    project = Project(
+        user_id=user.id,
+        name=payload.name.strip(),
+        description=payload.description,
+        source_type="local",
+        repo_url=str(folder),
+        status="processing",
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+
+    try:
+        project.storage_path = str(folder)
+        project.file_count = count_project_files(folder)
+        if project.file_count == 0:
+            raise ValueError("Folder is empty or contains no readable files")
+        project.status = "ready"
+        project.status_message = (
+            f"Linked local folder with {project.file_count} files (scans read directly from disk)"
+        )
+    except Exception as exc:
+        project.status = "failed"
+        project.status_message = str(exc)
+
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
 async def create_website_project(
     db: AsyncSession,
     user: User,
@@ -203,7 +321,9 @@ async def update_project(
 
 
 async def delete_project(db: AsyncSession, user: User, project: Project) -> None:
-    if project.source_type != "website":
+    if project.source_type in ("website", "local"):
+        pass
+    else:
         delete_project_dir(str(user.id), str(project.id))
     await db.delete(project)
     await db.commit()

@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000
+    allow_local_project_paths: bool = False
+    local_projects_root: str = ""
+
+    @property
+    def local_paths_enabled(self) -> bool:
+        return self.allow_local_project_paths or self.environment == "development"
 
     @field_validator("database_url", mode="before")
     @classmethod
