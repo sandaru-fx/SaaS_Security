@@ -42,6 +42,7 @@ export type ApiProject = {
   pr_checks_enabled?: boolean;
   active_dast_enabled?: boolean;
   browser_dast_enabled?: boolean;
+  zap_dast_enabled?: boolean;
   api_spec_url?: string | null;
   has_auth_configured?: boolean;
   asm_enabled?: boolean;
@@ -121,6 +122,8 @@ export type ApiIssue = {
   risk_factors: string | null;
   fix_now: boolean;
   severity_adjusted: string | null;
+  autofixable?: boolean;
+  autofix_pr_url?: string | null;
   created_at: string;
 };
 
@@ -433,6 +436,7 @@ export async function createWebsiteProject(
     ownership_confirmed: boolean;
     active_dast_enabled?: boolean;
     browser_dast_enabled?: boolean;
+    zap_dast_enabled?: boolean;
     asm_enabled?: boolean;
     auth?: AuthConfig | null;
   },
@@ -487,7 +491,7 @@ export async function createCloudProject(
 export async function updateProjectAuth(
   token: string,
   projectId: string,
-  data: { auth: AuthConfig; active_dast_enabled?: boolean | null; browser_dast_enabled?: boolean | null; asm_enabled?: boolean | null },
+  data: { auth: AuthConfig; active_dast_enabled?: boolean | null; browser_dast_enabled?: boolean | null; zap_dast_enabled?: boolean | null; asm_enabled?: boolean | null },
 ): Promise<ApiProject> {
   return apiFetch<ApiProject>(`/api/projects/${projectId}/auth`, token, {
     method: "PATCH",
@@ -776,5 +780,78 @@ export async function updateNotificationSettings(
   await apiFetch("/api/enterprise/notifications", token, {
     method: "PATCH",
     body: JSON.stringify({ email_alerts_enabled }),
+  });
+}
+
+export type OrganizationInfo = {
+  id: string;
+  name: string;
+  brand_name: string | null;
+  brand_logo_url: string | null;
+  owner_id: string;
+  created_at: string;
+};
+
+export type OrganizationMemberInfo = {
+  id: string;
+  user_id: string | null;
+  role: string;
+  invited_email: string | null;
+  created_at: string;
+};
+
+export async function listOrganizations(token: string): Promise<OrganizationInfo[]> {
+  return apiFetch<OrganizationInfo[]>("/api/enterprise/organizations", token);
+}
+
+export async function createOrganization(
+  token: string,
+  data: { name: string; brand_name?: string },
+): Promise<OrganizationInfo> {
+  return apiFetch<OrganizationInfo>("/api/enterprise/organizations", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listOrganizationMembers(
+  token: string,
+  orgId: string,
+): Promise<OrganizationMemberInfo[]> {
+  return apiFetch<OrganizationMemberInfo[]>(
+    `/api/enterprise/organizations/${orgId}/members`,
+    token,
+  );
+}
+
+export async function inviteOrganizationMember(
+  token: string,
+  orgId: string,
+  data: { email: string; role?: string },
+): Promise<OrganizationMemberInfo> {
+  return apiFetch<OrganizationMemberInfo>(
+    `/api/enterprise/organizations/${orgId}/members`,
+    token,
+    { method: "POST", body: JSON.stringify(data) },
+  );
+}
+
+export async function removeOrganizationMember(
+  token: string,
+  orgId: string,
+  memberId: string,
+): Promise<void> {
+  await apiFetch(`/api/enterprise/organizations/${orgId}/members/${memberId}`, token, {
+    method: "DELETE",
+  });
+}
+
+export async function createAutofixPr(
+  token: string,
+  scanId: string,
+  issueId: string,
+): Promise<{ pr_url: string; file_path: string; action: string }> {
+  return apiFetch(`/api/scans/${scanId}/issues/${issueId}/autofix-pr`, token, {
+    method: "POST",
   });
 }

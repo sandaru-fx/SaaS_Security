@@ -10,15 +10,22 @@ import {
   ApiKeyInfo,
   ApiProject,
   CustomRuleInfo,
+  OrganizationInfo,
+  OrganizationMemberInfo,
   ScheduleInfo,
   createApiKey,
   createCustomRule,
+  createOrganization,
   createSchedule,
   deleteApiKey,
+  inviteOrganizationMember,
   listApiKeys,
   listCustomRules,
+  listOrganizationMembers,
+  listOrganizations,
   listProjects,
   listSchedules,
+  removeOrganizationMember,
   updateNotificationSettings,
   updateGithubPat,
 } from "@/lib/api";
@@ -38,6 +45,11 @@ export default function EnterprisePage() {
   const [githubPat, setGithubPat] = useState("");
   const [patConfigured, setPatConfigured] = useState(false);
   const [patSaving, setPatSaving] = useState(false);
+  const [orgs, setOrgs] = useState<OrganizationInfo[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [members, setMembers] = useState<OrganizationMemberInfo[]>([]);
+  const [orgName, setOrgName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,16 +58,23 @@ export default function EnterprisePage() {
       try {
         const token = await getToken();
         if (!token) return;
-        const [keys, scheds, customRules, projectData] = await Promise.all([
+        const [keys, scheds, customRules, projectData, orgList] = await Promise.all([
           listApiKeys(token).catch(() => []),
           listSchedules(token).catch(() => []),
           listCustomRules(token).catch(() => []),
           listProjects(token),
+          listOrganizations(token).catch(() => []),
         ]);
         setApiKeys(keys);
         setSchedules(scheds);
         setRules(customRules);
         setProjects(projectData.projects);
+        setOrgs(orgList);
+        if (orgList[0]) {
+          setSelectedOrgId(orgList[0].id);
+          const m = await listOrganizationMembers(token, orgList[0].id).catch(() => []);
+          setMembers(m);
+        }
         if (projectData.projects[0]) {
           setScheduleProjectId(projectData.projects[0].id);
         }
@@ -121,6 +140,55 @@ export default function EnterprisePage() {
     setEmailAlerts(next);
   }
 
+  async function handleCreateOrg(e: FormEvent) {
+    e.preventDefault();
+    const token = await getToken();
+    if (!token || !orgName.trim()) return;
+    try {
+      const org = await createOrganization(token, { name: orgName.trim() });
+      setOrgs((prev) => [org, ...prev]);
+      setSelectedOrgId(org.id);
+      setMembers([]);
+      setOrgName("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create organization");
+    }
+  }
+
+  async function handleInviteMember(e: FormEvent) {
+    e.preventDefault();
+    const token = await getToken();
+    if (!token || !selectedOrgId || !inviteEmail.trim()) return;
+    try {
+      const member = await inviteOrganizationMember(token, selectedOrgId, {
+        email: inviteEmail.trim(),
+      });
+      setMembers((prev) => [...prev, member]);
+      setInviteEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to invite member");
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    const token = await getToken();
+    if (!token || !selectedOrgId) return;
+    try {
+      await removeOrganizationMember(token, selectedOrgId, memberId);
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove member");
+    }
+  }
+
+  async function handleSelectOrg(orgId: string) {
+    setSelectedOrgId(orgId);
+    const token = await getToken();
+    if (!token) return;
+    const m = await listOrganizationMembers(token, orgId).catch(() => []);
+    setMembers(m);
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <AppHeader badge="Phase 10 — Enterprise" />
@@ -145,6 +213,78 @@ export default function EnterprisePage() {
         )}
 
         <div className="mt-10 space-y-10">
+          <Section title="Team Organization (up to 5 members)">
+            <p className="mb-4 text-sm text-zinc-400">
+              Create a team org, invite members by email, and manage access. Requires Team plan.
+            </p>
+            <form onSubmit={handleCreateOrg} className="mb-6 flex gap-2">
+              <input
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="Organization name"
+                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
+              >
+                Create
+              </button>
+            </form>
+            {orgs.length > 0 && (
+              <div className="space-y-4">
+                <select
+                  value={selectedOrgId}
+                  onChange={(e) => handleSelectOrg(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+                <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
+                  {members.map((m) => (
+                    <li
+                      key={m.id}
+                      className="flex items-center justify-between px-4 py-3 text-sm"
+                    >
+                      <span>
+                        {m.invited_email ?? m.user_id ?? "Pending invite"}{" "}
+                        <span className="text-zinc-500">({m.role})</span>
+                      </span>
+                      {m.role !== "owner" && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(m.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <form onSubmit={handleInviteMember} className="flex gap-2">
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="colleague@company.com"
+                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-zinc-600 px-4 py-2 text-sm hover:bg-zinc-800"
+                  >
+                    Invite
+                  </button>
+                </form>
+              </div>
+            )}
+          </Section>
+
           <Section title="API Keys (CI/CD)">
             <p className="mb-4 text-sm text-zinc-400">
               Use <code className="text-emerald-400">X-API-Key</code> header with{" "}
