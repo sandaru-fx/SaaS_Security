@@ -16,3 +16,4 @@ stripe==11.4.1
 reportlab==4.2.5
 aiosqlite==0.21.0
 dnspython==2.7.0
+bandit==1.8.3

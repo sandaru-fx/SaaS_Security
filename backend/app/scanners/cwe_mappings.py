@@ -22,7 +22,8 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "password-in-code": ("CWE-259", "A07:2021 - Identification and Authentication Failures"),
     "private-key": ("CWE-321", "A02:2021 - Cryptographic Failures"),
     "jwt-secret": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
-    # website scanner (sample)
+    "high-entropy-secret": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
+    "git-history-aws-access-key": ("CWE-798", "A07:2021 - Identification and Authentication Failures"),
     "missing-hsts": ("CWE-319", "A05:2021 - Security Misconfiguration"),
     "missing-csp": ("CWE-1021", "A05:2021 - Security Misconfiguration"),
     "missing-x-frame-options": ("CWE-1021", "A05:2021 - Security Misconfiguration"),
