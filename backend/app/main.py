@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import health, projects, scans, users
 from app.config import get_settings
 from app.database import Base, engine
+from app.db_migrate import run_additive_migrations
 from app.models import issue as issue_model  # noqa: F401
 from app.models import project as project_model  # noqa: F401
 from app.models import scan as scan_model  # noqa: F401
@@ -18,6 +19,7 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await run_additive_migrations(conn)
     yield
 
 

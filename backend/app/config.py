@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     clerk_jwks_url: str = ""
     clerk_jwt_issuer: str = ""
 
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = ""
+
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000
@@ -36,6 +40,10 @@ class Settings(BaseSettings):
     @property
     def clerk_enabled(self) -> bool:
         return bool(self.clerk_secret_key and self.clerk_jwks_url)
+
+    @property
+    def ai_enabled(self) -> bool:
+        return bool(self.openai_api_key)
 
 
 @lru_cache

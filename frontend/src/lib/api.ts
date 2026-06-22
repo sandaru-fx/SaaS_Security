@@ -68,6 +68,7 @@ export type ApiIssue = {
   description: string;
   impact: string;
   fix_recommendation: string;
+  business_risk: string | null;
   file_path: string | null;
   line_start: number;
   line_end: number;
@@ -98,6 +99,10 @@ export type AuditReport = {
   top_priority_issues: ApiIssue[];
   production_ready: boolean;
   estimated_score_if_top_fixed: number | null;
+  ai_summary: string | null;
+  ai_business_risk: string | null;
+  ai_recommendations: string[];
+  ai_provider: string | null;
 };
 
 export type ScanListResponse = { scans: ApiScan[]; total: number };

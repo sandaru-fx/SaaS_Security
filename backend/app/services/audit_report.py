@@ -8,6 +8,7 @@ from app.schemas.scan import (
     CategoryScoreResponse,
     IssueResponse,
 )
+from app.services.ai_auditor import parse_recommendations
 from app.services.report_service import (
     apply_scores_to_scan,
     calculate_category_scores,
@@ -31,6 +32,7 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         description=issue.description,
         impact=issue.impact,
         fix_recommendation=issue.fix_recommendation,
+        business_risk=issue.business_risk,
         file_path=issue.file_path,
         line_start=issue.line_start,
         line_end=issue.line_end,
@@ -47,8 +49,18 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
     result = await db.execute(select(Issue).where(Issue.scan_id == scan.id))
     issues = list(result.scalars().all())
 
+    needs_commit = False
     if scan.health_score is None and issues:
         apply_scores_to_scan(scan, issues)
+        needs_commit = True
+
+    if scan.status == "completed" and scan.ai_summary is None:
+        from app.services.ai_auditor import enrich_scan_with_ai
+
+        enrich_scan_with_ai(scan, issues)
+        needs_commit = True
+
+    if needs_commit:
         await db.commit()
         await db.refresh(scan)
 
@@ -89,6 +101,10 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         top_priority_issues=[issue_to_response(i) for i in top_issues],
         production_ready=overall >= 80 and scan.critical_count == 0,
         estimated_score_if_top_fixed=estimated,
+        ai_summary=scan.ai_summary,
+        ai_business_risk=scan.ai_business_risk,
+        ai_recommendations=parse_recommendations(scan.ai_recommendations),
+        ai_provider=scan.ai_provider,
     )
 
 

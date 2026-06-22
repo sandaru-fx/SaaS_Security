@@ -58,6 +58,7 @@ class IssueResponse(BaseModel):
     description: str
     impact: str
     fix_recommendation: str
+    business_risk: str | None = None
     file_path: str | None
     line_start: int
     line_end: int
@@ -98,3 +99,7 @@ class AuditReportResponse(BaseModel):
         default=None,
         description="Estimated score if top 5 critical/high issues are resolved",
     )
+    ai_summary: str | None = None
+    ai_business_risk: str | None = None
+    ai_recommendations: list[str] = Field(default_factory=list)
+    ai_provider: str | None = None

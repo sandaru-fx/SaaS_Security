@@ -27,6 +27,7 @@ class Issue(Base):
     description: Mapped[str] = mapped_column(Text)
     impact: Mapped[str] = mapped_column(Text)
     fix_recommendation: Mapped[str] = mapped_column(Text)
+    business_risk: Mapped[str] = mapped_column(Text, nullable=True)
     file_path: Mapped[str] = mapped_column(String(500), nullable=True)
     line_start: Mapped[int] = mapped_column(Integer, default=0)
     line_end: Mapped[int] = mapped_column(Integer, default=0)

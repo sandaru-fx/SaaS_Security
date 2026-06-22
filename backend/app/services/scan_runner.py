@@ -47,11 +47,14 @@ def execute_scan(scan_id: str) -> None:
         findings, scanners_used = run_all_scanners(project_dir)
         _save_findings(session, scan, findings)
 
-        issues = session.execute(
+        issues = list(session.execute(
             select(Issue).where(Issue.scan_id == scan.id)
-        ).scalars().all()
+        ).scalars().all())
         from app.services.report_service import apply_scores_to_scan
-        apply_scores_to_scan(scan, list(issues))
+        apply_scores_to_scan(scan, issues)
+
+        from app.services.ai_auditor import enrich_scan_with_ai
+        enrich_scan_with_ai(scan, issues)
 
         scan.scanners_used = ",".join(scanners_used)
         scan.status = "completed"

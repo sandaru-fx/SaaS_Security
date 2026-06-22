@@ -35,9 +35,17 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
         </div>
 
         <Section title="Problem" content={issue.description} />
-        <Section title="Business Impact" content={issue.impact} />
-        <Section title="Technical Risk" content={`Severity: ${issue.severity.toUpperCase()} · Confidence: ${issue.confidence}`} />
-        <Section title="How To Fix" content={issue.fix_recommendation} highlight />
+        <Section title="Impact" content={issue.impact} />
+        {issue.business_risk && (
+          <Section title="Business Risk" content={issue.business_risk} warn />
+        )}
+        <Section title="Fix" content={issue.fix_recommendation} highlight />
+        <Section
+          title="Priority"
+          content={`Severity: ${issue.severity.toUpperCase()} · Confidence: ${issue.confidence}${
+            issue.priority != null ? ` · Priority score: ${issue.priority}` : ""
+          }`}
+        />
 
         {(issue.file_path || issue.rule_id) && (
           <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 font-mono text-xs text-zinc-400">
@@ -59,17 +67,18 @@ function Section({
   title,
   content,
   highlight = false,
+  warn = false,
 }: {
   title: string;
   content: string;
   highlight?: boolean;
+  warn?: boolean;
 }) {
+  const tone = highlight ? "text-emerald-300" : warn ? "text-amber-300" : "text-zinc-300";
   return (
     <div className="mt-4">
       <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</p>
-      <p className={`mt-2 text-sm leading-relaxed ${highlight ? "text-emerald-300" : "text-zinc-300"}`}>
-        {content}
-      </p>
+      <p className={`mt-2 text-sm leading-relaxed ${tone}`}>{content}</p>
     </div>
   );
 }

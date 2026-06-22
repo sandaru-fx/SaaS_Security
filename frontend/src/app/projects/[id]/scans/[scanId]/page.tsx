@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { AIAuditSummary } from "@/components/AIAuditSummary";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { HealthScoreRing } from "@/components/HealthScoreRing";
@@ -101,7 +102,7 @@ export default function ScanResultsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 5 — Report" />
+      <AppHeader badge="Phase 6 — AI Auditor" />
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
@@ -191,6 +192,8 @@ export default function ScanResultsPage() {
                 )}
               </section>
             )}
+
+            {report && scan.status === "completed" && <AIAuditSummary report={report} />}
 
             <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
               <CountCard label="Total" value={scan.total_issues} />
