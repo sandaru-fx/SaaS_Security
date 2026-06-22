@@ -34,6 +34,10 @@ def execute_scan(scan_id: str) -> None:
             if project.status != "ready" or not project.repo_url:
                 _fail_scan(session, scan, f"{project.source_type.title()} target is not ready for scanning")
                 return
+        elif project.source_type == "cloud":
+            if project.status != "ready" or not project.cloud_config:
+                _fail_scan(session, scan, "Cloud project is not ready for scanning")
+                return
         elif project.status != "ready" or not project.storage_path:
             _fail_scan(session, scan, "Project source code is not ready for scanning")
             return
@@ -124,6 +128,17 @@ def execute_scan(scan_id: str) -> None:
             if project.domain_verified:
                 raw_findings.extend(_run_graphql_ws_live(spec_url, auth, scanners_used))
 
+            findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
+
+        elif project.source_type == "cloud":
+            from app.scanners.cloud_cspm import scan_cloud
+            from app.scanners.cwe_mappings import enrich_finding_tags
+            from app.scanners.dedup import deduplicate_findings
+            from app.services.project_service import deserialize_cloud_config
+
+            config = deserialize_cloud_config(project.cloud_config) or {}
+            raw_findings = scan_cloud(project.cloud_provider or "aws", config)
+            scanners_used = ["cloud-cspm"]
             findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
 
         else:

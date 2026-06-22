@@ -12,6 +12,13 @@ class SourceType(str, Enum):
     local = "local"
     website = "website"
     api = "api"
+    cloud = "cloud"
+
+
+class CloudProvider(str, Enum):
+    aws = "aws"
+    azure = "azure"
+    gcp = "gcp"
 
 
 class AuthType(str, Enum):
@@ -88,6 +95,27 @@ class ProjectCreateLocal(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
 
 
+class ProjectCreateCloud(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    cloud_provider: CloudProvider
+    ownership_confirmed: bool = Field(
+        description="User confirms they own or have permission to scan this cloud account"
+    )
+    # AWS
+    aws_access_key_id: str | None = Field(default=None, max_length=128)
+    aws_secret_access_key: str | None = Field(default=None, max_length=256)
+    aws_region: str | None = Field(default="us-east-1", max_length=50)
+    aws_session_token: str | None = Field(default=None, max_length=2000)
+    # Azure
+    azure_tenant_id: str | None = Field(default=None, max_length=100)
+    azure_client_id: str | None = Field(default=None, max_length=100)
+    azure_client_secret: str | None = Field(default=None, max_length=500)
+    azure_subscription_id: str | None = Field(default=None, max_length=100)
+    # GCP
+    gcp_service_account_json: str | None = Field(default=None, max_length=8000)
+
+
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
@@ -112,6 +140,8 @@ class ProjectResponse(BaseModel):
     has_auth_configured: bool = False
     asm_enabled: bool = False
     asm_root_domain: str | None = None
+    cloud_provider: str | None = None
+    has_cloud_configured: bool = False
     created_at: datetime
     updated_at: datetime
 

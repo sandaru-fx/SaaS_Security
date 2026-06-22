@@ -1,5 +1,6 @@
 import json
 import tempfile
+import asyncio
 from pathlib import Path
 from uuid import UUID
 
@@ -12,9 +13,11 @@ from app.models.project import Project
 from app.models.user import User
 from app.schemas.project import (
     AuthConfig,
+    CloudProvider,
     ProjectAsmUpdate,
     ProjectAuthUpdate,
     ProjectCreateApi,
+    ProjectCreateCloud,
     ProjectCreateGithub,
     ProjectCreateLocal,
     ProjectCreateWebsite,
@@ -351,6 +354,100 @@ def deserialize_auth(raw: str | None) -> dict | None:
         return None
 
 
+def _serialize_cloud_config(config: dict) -> str:
+    return json.dumps(config)
+
+
+def deserialize_cloud_config(raw: str | None) -> dict | None:
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else None
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+def _build_cloud_config(payload: ProjectCreateCloud) -> dict:
+    if payload.cloud_provider == CloudProvider.aws:
+        if not payload.aws_access_key_id or not payload.aws_secret_access_key:
+            raise ValueError("AWS access key ID and secret access key are required")
+        config: dict = {
+            "access_key_id": payload.aws_access_key_id.strip(),
+            "secret_access_key": payload.aws_secret_access_key.strip(),
+            "region": (payload.aws_region or "us-east-1").strip(),
+        }
+        if payload.aws_session_token and payload.aws_session_token.strip():
+            config["session_token"] = payload.aws_session_token.strip()
+        return config
+
+    if payload.cloud_provider == CloudProvider.azure:
+        if not all(
+            [
+                payload.azure_tenant_id,
+                payload.azure_client_id,
+                payload.azure_client_secret,
+                payload.azure_subscription_id,
+            ]
+        ):
+            raise ValueError(
+                "Azure tenant ID, client ID, client secret, and subscription ID are required"
+            )
+        return {
+            "tenant_id": payload.azure_tenant_id.strip(),
+            "client_id": payload.azure_client_id.strip(),
+            "client_secret": payload.azure_client_secret.strip(),
+            "subscription_id": payload.azure_subscription_id.strip(),
+        }
+
+    if payload.cloud_provider == CloudProvider.gcp:
+        raw_json = (payload.gcp_service_account_json or "").strip()
+        if not raw_json:
+            raise ValueError("GCP service account JSON is required")
+        try:
+            json.loads(raw_json)
+        except json.JSONDecodeError as exc:
+            raise ValueError("GCP service account JSON is not valid JSON") from exc
+        return {"service_account_json": raw_json}
+
+    raise ValueError("Unsupported cloud provider")
+
+
+async def create_cloud_project(
+    db: AsyncSession,
+    user: User,
+    payload: ProjectCreateCloud,
+) -> Project:
+    if not has_feature(user, "private_repos"):
+        raise ValueError("Cloud CSPM requires Pro or Team plan.")
+    if not payload.ownership_confirmed:
+        raise ValueError("You must confirm ownership or permission to scan this cloud account")
+
+    config = _build_cloud_config(payload)
+    from app.scanners.cloud_cspm import validate_cloud_credentials
+
+    await asyncio.to_thread(
+        validate_cloud_credentials,
+        payload.cloud_provider.value,
+        config,
+    )
+
+    project = Project(
+        user_id=user.id,
+        name=payload.name.strip(),
+        description=payload.description,
+        source_type="cloud",
+        cloud_provider=payload.cloud_provider.value,
+        cloud_config=_serialize_cloud_config(config),
+        status="ready",
+        status_message=f"Cloud account connected ({payload.cloud_provider.value.upper()})",
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
 async def create_api_project(
     db: AsyncSession,
     user: User,
@@ -455,7 +552,7 @@ def _derive_asm_root(url: str) -> str | None:
 
 
 async def delete_project(db: AsyncSession, user: User, project: Project) -> None:
-    if project.source_type in ("website", "local", "api"):
+    if project.source_type in ("website", "local", "api", "cloud"):
         pass
     else:
         delete_project_dir(str(user.id), str(project.id))

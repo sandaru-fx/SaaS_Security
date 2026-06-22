@@ -35,6 +35,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   local: "Local Path",
   website: "Live Website",
   api: "REST API (OpenAPI)",
+  cloud: "Cloud CSPM",
 };
 
 const statusColors: Record<ApiProject["status"], string> = {
@@ -248,8 +249,24 @@ export default function ProjectDetailPage() {
                 />
               )}
               {project.repo_branch && <DetailRow label="Branch" value={project.repo_branch} />}
-              {project.source_type !== "website" && project.source_type !== "api" && (
+              {project.source_type !== "website" && project.source_type !== "api" && project.source_type !== "cloud" && (
                 <DetailRow label="Files" value={String(project.file_count)} />
+              )}
+              {project.source_type === "cloud" && (
+                <>
+                  <DetailRow
+                    label="Cloud Provider"
+                    value={(project.cloud_provider ?? "unknown").toUpperCase()}
+                  />
+                  <DetailRow
+                    label="Credentials"
+                    value={
+                      project.has_cloud_configured
+                        ? "Configured (stored securely, not shown)"
+                        : "Not configured"
+                    }
+                  />
+                </>
               )}
               {project.source_type === "website" && (
                 <>

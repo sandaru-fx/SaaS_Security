@@ -12,6 +12,7 @@ from app.schemas.project import (
     ProjectAsmUpdate,
     ProjectAuthUpdate,
     ProjectCreateApi,
+    ProjectCreateCloud,
     ProjectCreateGithub,
     ProjectCreateLocal,
     ProjectCreateWebsite,
@@ -78,6 +79,24 @@ async def create_api_project(
 ) -> ProjectResponse:
     try:
         project = await project_service.create_api_project(db, current_user, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.post("/cloud", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_cloud_project(
+    payload: ProjectCreateCloud,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    if not has_feature(current_user, "private_repos"):
+        raise HTTPException(
+            status_code=403,
+            detail="Cloud CSPM requires Pro or Team plan.",
+        )
+    try:
+        project = await project_service.create_cloud_project(db, current_user, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return ProjectResponse.model_validate(project)

@@ -41,6 +41,8 @@ class Project(Base):
     auth_config: Mapped[str] = mapped_column(Text, nullable=True)
     asm_enabled: Mapped[bool] = mapped_column(default=False)
     asm_root_domain: Mapped[str] = mapped_column(String(255), nullable=True)
+    cloud_provider: Mapped[str] = mapped_column(String(20), nullable=True)
+    cloud_config: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -57,3 +59,7 @@ class Project(Base):
     @property
     def has_auth_configured(self) -> bool:
         return bool(self.auth_config and self.auth_config.strip() not in ("", "{}"))
+
+    @property
+    def has_cloud_configured(self) -> bool:
+        return bool(self.cloud_config and self.cloud_config.strip() not in ("", "{}"))
