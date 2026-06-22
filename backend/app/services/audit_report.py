@@ -41,6 +41,8 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         confidence=issue.confidence,
         priority=issue_priority(issue),
         report_category=map_issue_category(issue.category),
+        dismissed=bool(issue.dismissed),
+        dismissed_reason=issue.dismissed_reason,
         created_at=issue.created_at,
     )
 

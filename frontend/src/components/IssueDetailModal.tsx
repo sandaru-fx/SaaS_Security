@@ -3,9 +3,10 @@ import { ApiIssue } from "@/lib/api";
 type IssueDetailModalProps = {
   issue: ApiIssue | null;
   onClose: () => void;
+  onDismiss?: (issue: ApiIssue) => void;
 };
 
-export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
+export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModalProps) {
   if (!issue) return null;
 
   return (
@@ -57,6 +58,23 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
             )}
             <p className="mt-1">Rule: {issue.rule_id}</p>
           </div>
+        )}
+
+        {issue.dismissed ? (
+          <p className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-400">
+            Dismissed as false positive
+            {issue.dismissed_reason && ` — ${issue.dismissed_reason}`}
+          </p>
+        ) : (
+          onDismiss && (
+            <button
+              type="button"
+              onClick={() => onDismiss(issue)}
+              className="mt-6 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+            >
+              Dismiss as false positive
+            </button>
+          )
         )}
       </div>
     </div>

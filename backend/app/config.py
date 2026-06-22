@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     stripe_price_team: str = ""
     frontend_url: str = "http://localhost:3000"
 
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_use_tls: bool = True
+
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000

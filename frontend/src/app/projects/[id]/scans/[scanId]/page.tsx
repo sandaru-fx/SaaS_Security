@@ -16,6 +16,7 @@ import {
   ApiScan,
   AuditReport,
   SubscriptionInfo,
+  dismissIssue,
   downloadAuditPdf,
   getAuditReport,
   getScan,
@@ -136,9 +137,26 @@ export default function ScanResultsPage() {
     }
   }
 
+  async function handleDismissIssue(issue: ApiIssue) {
+    const reason = window.prompt("Reason for dismissing (optional):") ?? undefined;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await dismissIssue(token, issue.id, reason || undefined);
+      setIssues((prev) =>
+        prev.map((i) =>
+          i.id === issue.id ? { ...i, dismissed: true, dismissed_reason: reason || null } : i,
+        ),
+      );
+      setSelectedIssue(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to dismiss issue");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 9 — Pro Reports" />
+      <AppHeader badge="Phase 10 — Enterprise" />
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
@@ -299,7 +317,11 @@ export default function ScanResultsPage() {
         )}
       </main>
 
-      <IssueDetailModal issue={selectedIssue} onClose={() => setSelectedIssue(null)} />
+      <IssueDetailModal
+        issue={selectedIssue}
+        onClose={() => setSelectedIssue(null)}
+        onDismiss={handleDismissIssue}
+      />
     </div>
   );
 }

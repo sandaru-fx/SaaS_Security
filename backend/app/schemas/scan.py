@@ -67,6 +67,8 @@ class IssueResponse(BaseModel):
     confidence: str
     priority: int | None = None
     report_category: str | None = None
+    dismissed: bool = False
+    dismissed_reason: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

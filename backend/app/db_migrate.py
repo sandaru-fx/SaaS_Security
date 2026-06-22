@@ -33,6 +33,12 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
     ("users", "stripe_subscription_id", "VARCHAR(255)"),
     ("users", "scans_used_this_period", "INTEGER"),
     ("users", "billing_period_start", "TIMESTAMP WITH TIME ZONE"),
+    ("users", "email_alerts_enabled", "BOOLEAN"),
+    ("issues", "dismissed", "BOOLEAN"),
+    ("issues", "dismissed_reason", "TEXT"),
+    ("issues", "dismissed_at", "TIMESTAMP WITH TIME ZONE"),
+    ("projects", "webhook_url", "VARCHAR(500)"),
+    ("projects", "webhook_secret", "VARCHAR(255)"),
 ]
 
 

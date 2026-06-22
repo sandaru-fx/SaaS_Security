@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,9 @@ class Issue(Base):
     scanner: Mapped[str] = mapped_column(String(50))
     confidence: Mapped[str] = mapped_column(String(20), default="medium")
     extra_data: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
+    dismissed_reason: Mapped[str] = mapped_column(Text, nullable=True)
+    dismissed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

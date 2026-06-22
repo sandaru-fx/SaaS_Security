@@ -1,18 +1,38 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import billing, dashboard, health, projects, scans, users
+from app.api.routes import billing, dashboard, enterprise, health, projects, scans, users, v1
 from app.config import get_settings
 from app.database import Base, engine
 from app.db_migrate import run_additive_migrations
+from app.db_sync import get_sync_session
+from app.models import enterprise as enterprise_model  # noqa: F401
 from app.models import issue as issue_model  # noqa: F401
 from app.models import project as project_model  # noqa: F401
 from app.models import scan as scan_model  # noqa: F401
 from app.models import user as user_model  # noqa: F401
+from app.services.schedule_service import process_due_schedules
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+
+async def _schedule_worker() -> None:
+    while True:
+        await asyncio.sleep(300)
+        session = get_sync_session()
+        try:
+            count = process_due_schedules(session)
+            if count:
+                logger.info("Started %d scheduled audit(s)", count)
+        except Exception as exc:
+            logger.warning("Schedule worker error: %s", exc)
+        finally:
+            session.close()
 
 
 @asynccontextmanager
@@ -20,7 +40,9 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await run_additive_migrations(conn)
+    schedule_task = asyncio.create_task(_schedule_worker())
     yield
+    schedule_task.cancel()
 
 
 app = FastAPI(
@@ -41,9 +63,11 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(billing.router, prefix="/api")
+app.include_router(enterprise.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(scans.router, prefix="/api")
+app.include_router(v1.router, prefix="/api")
 
 
 @app.get("/")
@@ -56,4 +80,6 @@ async def root() -> dict:
         "projects": "/api/projects",
         "scans": "/api/scans",
         "dashboard": "/api/dashboard",
+        "enterprise": "/api/enterprise",
+        "api_v1": "/api/v1",
     }

@@ -30,6 +30,8 @@ class Project(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")
     status_message: Mapped[str] = mapped_column(Text, nullable=True)
     file_count: Mapped[int] = mapped_column(Integer, default=0)
+    webhook_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    webhook_secret: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

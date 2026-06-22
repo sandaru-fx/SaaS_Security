@@ -45,6 +45,24 @@ def execute_scan(scan_id: str) -> None:
         session.commit()
 
         findings, scanners_used = run_all_scanners(project_dir)
+
+        from app.models.enterprise import CustomRule
+        from app.scanners.custom_rules import scan_custom_rules
+
+        rules = list(
+            session.execute(
+                select(CustomRule).where(
+                    CustomRule.user_id == scan.user_id,
+                    CustomRule.enabled.is_(True),
+                )
+            ).scalars().all()
+        )
+        if rules:
+            custom_findings = scan_custom_rules(project_dir, rules)
+            if custom_findings:
+                findings.extend(custom_findings)
+                scanners_used.append("custom-rules")
+
         _save_findings(session, scan, findings)
 
         issues = list(session.execute(
@@ -65,6 +83,14 @@ def execute_scan(scan_id: str) -> None:
         scan.status = "completed"
         scan.completed_at = datetime.now(timezone.utc)
         session.commit()
+
+        from app.services.notification_service import send_critical_alert
+        from app.services.webhook_service import notify_scan_complete
+
+        notify_scan_complete(scan, project)
+        if user:
+            send_critical_alert(user, scan, project.name)
+
         logger.info("Scan %s completed with %d issues", scan_id, scan.total_issues)
 
     except Exception as exc:

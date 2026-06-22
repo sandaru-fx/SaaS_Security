@@ -1,0 +1,26 @@
+name: AI Software Auditor
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AUDITOR_API_KEY != '' && secrets.AUDITOR_PROJECT_ID != '' }}
+    steps:
+      - name: Trigger remote audit
+        env:
+          AUDITOR_API_URL: ${{ secrets.AUDITOR_API_URL || 'https://your-api.example.com' }}
+          AUDITOR_PROJECT_ID: ${{ secrets.AUDITOR_PROJECT_ID }}
+          AUDITOR_API_KEY: ${{ secrets.AUDITOR_API_KEY }}
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${AUDITOR_API_URL}/api/v1/projects/${AUDITOR_PROJECT_ID}/scans" \
+            -H "X-API-Key: ${AUDITOR_API_KEY}" \
+            -H "Content-Type: application/json")
+          body=$(echo "$response" | head -n -1)
+          code=$(echo "$response" | tail -n 1)
+          echo "Response ($code): $body"
+          if [ "$code" -ge 400 ]; then exit 1; fi

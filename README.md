@@ -105,6 +105,16 @@ SaaS_2/
 3. Forward webhooks locally: `stripe listen --forward-to localhost:8000/api/billing/webhook`
 4. Without Stripe keys the app runs on the Free plan — no payments required for development.
 
+### Phase 10 — Enterprise & Scale
+- [x] Team organizations and member invites
+- [x] API keys + REST v1 (`/api/v1/projects/{id}/scans`)
+- [x] Scheduled audits (weekly/monthly background worker)
+- [x] Custom regex rules scanner
+- [x] Project webhooks on audit completion (CI/CD integration)
+- [x] Email alerts for critical issues (SMTP optional)
+- [x] False positive management — dismiss issues
+- [x] Enterprise settings UI + GitHub Actions workflow example
+
 ## AI Auditor (Phase 6)
 
 The AI Auditor turns raw findings into executive-friendly narratives.

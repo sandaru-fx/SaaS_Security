@@ -77,6 +77,8 @@ export type ApiIssue = {
   confidence: string;
   priority: number | null;
   report_category: string | null;
+  dismissed: boolean;
+  dismissed_reason: string | null;
   created_at: string;
 };
 
@@ -386,4 +388,109 @@ export async function downloadAuditPdf(token: string, scanId: string): Promise<B
     throw new Error(typeof detail === "string" ? detail : "PDF download failed");
   }
   return response.blob();
+}
+
+export type ApiKeyInfo = {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export type ApiKeyCreated = ApiKeyInfo & { api_key: string };
+
+export type ScheduleInfo = {
+  id: string;
+  project_id: string;
+  frequency: string;
+  enabled: boolean;
+  next_run_at: string;
+  last_run_at: string | null;
+  created_at: string;
+};
+
+export type CustomRuleInfo = {
+  id: string;
+  name: string;
+  pattern: string;
+  category: string;
+  severity: string;
+  enabled: boolean;
+  created_at: string;
+};
+
+export async function dismissIssue(
+  token: string,
+  issueId: string,
+  reason?: string,
+): Promise<void> {
+  await apiFetch(`/api/enterprise/issues/${issueId}/dismiss`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function listApiKeys(token: string): Promise<ApiKeyInfo[]> {
+  return apiFetch<ApiKeyInfo[]>("/api/enterprise/api-keys", token);
+}
+
+export async function createApiKey(token: string, name: string): Promise<ApiKeyCreated> {
+  return apiFetch<ApiKeyCreated>("/api/enterprise/api-keys", token, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteApiKey(token: string, keyId: string): Promise<void> {
+  await apiFetch(`/api/enterprise/api-keys/${keyId}`, token, { method: "DELETE" });
+}
+
+export async function listSchedules(token: string): Promise<ScheduleInfo[]> {
+  return apiFetch<ScheduleInfo[]>("/api/enterprise/schedules", token);
+}
+
+export async function createSchedule(
+  token: string,
+  data: { project_id: string; frequency: "weekly" | "monthly" },
+): Promise<ScheduleInfo> {
+  return apiFetch<ScheduleInfo>("/api/enterprise/schedules", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listCustomRules(token: string): Promise<CustomRuleInfo[]> {
+  return apiFetch<CustomRuleInfo[]>("/api/enterprise/custom-rules", token);
+}
+
+export async function createCustomRule(
+  token: string,
+  data: { name: string; pattern: string; category?: string; severity?: string },
+): Promise<CustomRuleInfo> {
+  return apiFetch<CustomRuleInfo>("/api/enterprise/custom-rules", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectWebhook(
+  token: string,
+  projectId: string,
+  data: { webhook_url?: string; webhook_secret?: string },
+): Promise<{ webhook_url: string | null; configured: boolean }> {
+  return apiFetch(`/api/enterprise/projects/${projectId}/webhook`, token, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateNotificationSettings(
+  token: string,
+  email_alerts_enabled: boolean,
+): Promise<void> {
+  await apiFetch("/api/enterprise/notifications", token, {
+    method: "PATCH",
+    body: JSON.stringify({ email_alerts_enabled }),
+  });
 }
