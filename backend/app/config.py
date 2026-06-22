@@ -48,6 +48,11 @@ class Settings(BaseSettings):
 
     github_webhook_secret: str = ""
 
+    zap_enabled: bool = False
+    zap_api_url: str = ""
+    zap_api_key: str = ""
+    zap_timeout_seconds: int = 600
+
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000

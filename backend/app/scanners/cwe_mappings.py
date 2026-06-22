@@ -256,6 +256,8 @@ def lookup_rule_tags(rule_id: str, scanner: str) -> dict[str, str]:
         return {"cwe_id": tags[0], "owasp_category": tags[1]}
     if scanner == "osv":
         return {"owasp_category": DEFAULT_DEPENDENCY_OWASP}
+    if scanner == "zap-dast":
+        return {"owasp_category": "A03:2021 - Injection", "cwe_id": "CWE-79"}
     return {}
 
 

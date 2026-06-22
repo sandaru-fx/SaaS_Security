@@ -94,6 +94,17 @@ def execute_scan(scan_id: str) -> None:
                 except Exception as exc:
                     logger.warning("Browser DAST failed for %s: %s", project.repo_url, exc)
 
+            if project.zap_dast_enabled and project.domain_verified:
+                try:
+                    from app.scanners.zap_scanner import scan_zap_baseline
+
+                    zap_findings = scan_zap_baseline(project.repo_url)
+                    if zap_findings:
+                        raw_findings.extend(zap_findings)
+                        scanners_used.append("zap-dast")
+                except Exception as exc:
+                    logger.warning("OWASP ZAP scan failed for %s: %s", project.repo_url, exc)
+
             if project.domain_verified:
                 raw_findings.extend(_run_graphql_ws_live(project.repo_url, auth, scanners_used))
 
