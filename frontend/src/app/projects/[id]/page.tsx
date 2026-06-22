@@ -10,6 +10,8 @@ import { ScanComparePanel } from "@/components/ScanComparePanel";
 import {
   ApiProject,
   ApiScan,
+  AuthConfig,
+  AuthType,
   DomainVerificationInfo,
   ScanCompareResult,
   SourceType,
@@ -20,6 +22,7 @@ import {
   listScans,
   startScan,
   updateProject,
+  updateProjectAuth,
   updateProjectPrChecks,
   verifyDomain,
 } from "@/lib/api";
@@ -30,6 +33,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   folder: "Local Folder",
   local: "Local Path",
   website: "Live Website",
+  api: "REST API (OpenAPI)",
 };
 
 const statusColors: Record<ApiProject["status"], string> = {
@@ -71,8 +75,9 @@ export default function ProjectDetailPage() {
   const [prChecksLoading, setPrChecksLoading] = useState(false);
 
   const completedScans = scans.filter((s) => s.status === "completed");
-  const websiteNeedsVerification =
-    project?.source_type === "website" && !project.domain_verified;
+  const liveTarget =
+    project?.source_type === "website" || project?.source_type === "api";
+  const websiteNeedsVerification = liveTarget && project && !project.domain_verified;
 
   useEffect(() => {
     async function load() {
@@ -88,7 +93,10 @@ export default function ProjectDetailPage() {
         setEditName(projectData.name);
         setEditDescription(projectData.description ?? "");
 
-        if (projectData.source_type === "website") {
+        if (
+          projectData.source_type === "website" ||
+          projectData.source_type === "api"
+        ) {
           try {
             const info = await getDomainVerification(token, projectId);
             setDomainInfo(info);
@@ -239,8 +247,20 @@ export default function ProjectDetailPage() {
                 />
               )}
               {project.repo_branch && <DetailRow label="Branch" value={project.repo_branch} />}
-              {project.source_type !== "website" && (
+              {project.source_type !== "website" && project.source_type !== "api" && (
                 <DetailRow label="Files" value={String(project.file_count)} />
+              )}
+              {project.source_type === "website" && (
+                <DetailRow
+                  label="Active DAST"
+                  value={project.active_dast_enabled ? "Enabled" : "Disabled"}
+                />
+              )}
+              {liveTarget && (
+                <DetailRow
+                  label="Authentication"
+                  value={project.has_auth_configured ? "Configured" : "None (public scan)"}
+                />
               )}
               <DetailRow label="Created" value={new Date(project.created_at).toLocaleString()} />
               {project.status_message && (
@@ -248,7 +268,7 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {project.source_type === "website" && domainInfo && (
+            {liveTarget && domainInfo && (
               <section className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/10 p-6">
                 <h2 className="text-sm font-medium uppercase tracking-widest text-amber-300">
                   Domain Ownership Verification
@@ -303,6 +323,15 @@ export default function ProjectDetailPage() {
                   </>
                 )}
               </section>
+            )}
+
+            {liveTarget && (
+              <ActiveDastPanel
+                project={project}
+                getToken={getToken}
+                onUpdate={setProject}
+                onError={setError}
+              />
             )}
 
             {project.source_type === "github" && (
@@ -515,5 +544,178 @@ function DetailRow({
         {value}
       </span>
     </div>
+  );
+}
+
+function ActiveDastPanel({
+  project,
+  getToken,
+  onUpdate,
+  onError,
+}: {
+  project: ApiProject;
+  getToken: () => Promise<string | null>;
+  onUpdate: (p: ApiProject) => void;
+  onError: (msg: string) => void;
+}) {
+  const [authType, setAuthType] = useState<AuthType>("none");
+  const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [cookies, setCookies] = useState("");
+  const [headerName, setHeaderName] = useState("");
+  const [headerValue, setHeaderValue] = useState("");
+  const [activeDast, setActiveDast] = useState(project.active_dast_enabled ?? false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  function buildAuth(): AuthConfig {
+    const cfg: AuthConfig = { type: authType };
+    if (authType === "bearer") cfg.token = token;
+    if (authType === "basic") {
+      cfg.username = username;
+      cfg.password = password;
+    }
+    if (authType === "cookie") cfg.cookies = cookies;
+    if (authType === "header") {
+      cfg.header_name = headerName;
+      cfg.header_value = headerValue;
+    }
+    return cfg;
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const jwt = await getToken();
+      if (!jwt) return;
+      const updated = await updateProjectAuth(jwt, project.id, {
+        auth: buildAuth(),
+        active_dast_enabled: project.source_type === "website" ? activeDast : null,
+      });
+      onUpdate(updated);
+      setSavedAt(new Date());
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-xl border border-rose-500/20 bg-rose-950/10 p-6">
+      <h2 className="text-sm font-medium uppercase tracking-widest text-rose-300">
+        Active DAST & Authentication
+      </h2>
+      <p className="mt-2 text-sm text-zinc-400">
+        {project.source_type === "website"
+          ? "Toggle live attack-style probes (XSS / SQLi / open-redirect / path-traversal / verbose errors / CORS) and optionally provide credentials so probes run as a logged-in user."
+          : "Provide credentials so OWASP API Top 10 tests can reach authenticated endpoints (BOLA, function-level auth, mass assignment, rate limiting)."}
+      </p>
+
+      {project.source_type === "website" && (
+        <label className="mt-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={activeDast}
+            onChange={(e) => setActiveDast(e.target.checked)}
+            className="h-4 w-4 rounded border-zinc-600"
+          />
+          <span className="text-sm text-zinc-300">
+            Enable Active DAST probes on next scan
+          </span>
+        </label>
+      )}
+
+      <div className="mt-4 space-y-3">
+        <select
+          value={authType}
+          onChange={(e) => setAuthType(e.target.value as AuthType)}
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+        >
+          <option value="none">No authentication</option>
+          <option value="bearer">Bearer token</option>
+          <option value="basic">HTTP Basic auth</option>
+          <option value="cookie">Cookie header</option>
+          <option value="header">Custom header (e.g. X-API-Key)</option>
+        </select>
+
+        {authType === "bearer" && (
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Bearer token"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+          />
+        )}
+        {authType === "basic" && (
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+          </div>
+        )}
+        {authType === "cookie" && (
+          <input
+            type="text"
+            value={cookies}
+            onChange={(e) => setCookies(e.target.value)}
+            placeholder="session=abc; csrf=xyz"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+          />
+        )}
+        {authType === "header" && (
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={headerName}
+              onChange={(e) => setHeaderName(e.target.value)}
+              placeholder="X-API-Key"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+            <input
+              type="password"
+              value={headerValue}
+              onChange={(e) => setHeaderValue(e.target.value)}
+              placeholder="Header value"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg bg-rose-500 px-5 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        {savedAt && (
+          <span className="text-xs text-emerald-300">
+            Saved at {savedAt.toLocaleTimeString()}
+          </span>
+        )}
+        {project.has_auth_configured && authType === "none" && !saving && (
+          <span className="text-xs text-amber-300">
+            Auth currently configured. Select &quot;No authentication&quot; and save to clear it.
+          </span>
+        )}
+      </div>
+    </section>
   );
 }

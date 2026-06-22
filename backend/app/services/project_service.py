@@ -1,3 +1,4 @@
+import json
 import tempfile
 from pathlib import Path
 from uuid import UUID
@@ -9,7 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Project
 from app.models.user import User
-from app.schemas.project import ProjectCreateGithub, ProjectCreateLocal, ProjectCreateWebsite, ProjectUpdate
+from app.schemas.project import (
+    AuthConfig,
+    ProjectAuthUpdate,
+    ProjectCreateApi,
+    ProjectCreateGithub,
+    ProjectCreateLocal,
+    ProjectCreateWebsite,
+    ProjectUpdate,
+)
 from app.scanners.website_scanner import normalize_website_url, validate_website_url
 from app.services.github import build_github_headers, build_github_zipball_url, parse_github_url
 from app.services.domain_verification import generate_verification_token
@@ -276,6 +285,8 @@ async def create_website_project(
         domain_verification_token=generate_verification_token(),
         domain_verified=False,
         status="processing",
+        active_dast_enabled=bool(payload.active_dast_enabled),
+        auth_config=_serialize_auth(payload.auth),
     )
     db.add(project)
     await db.commit()
@@ -320,8 +331,89 @@ async def update_project(
     return project
 
 
+def _serialize_auth(auth: AuthConfig | None) -> str | None:
+    if not auth or auth.type.value == "none":
+        return None
+    data = auth.model_dump(exclude_none=True)
+    return json.dumps(data)
+
+
+def deserialize_auth(raw: str | None) -> dict | None:
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+async def create_api_project(
+    db: AsyncSession,
+    user: User,
+    payload: ProjectCreateApi,
+) -> Project:
+    if not payload.ownership_confirmed:
+        raise ValueError("You must confirm ownership or permission to scan this API")
+
+    spec_url = payload.api_spec_url.strip()
+    if not spec_url.startswith(("http://", "https://")):
+        raise ValueError("API spec URL must start with http:// or https://")
+
+    project = Project(
+        user_id=user.id,
+        name=payload.name.strip(),
+        description=payload.description,
+        source_type="api",
+        repo_url=spec_url,
+        api_spec_url=spec_url,
+        domain_verification_token=generate_verification_token(),
+        domain_verified=False,
+        status="processing",
+        active_dast_enabled=True,
+        auth_config=_serialize_auth(payload.auth),
+    )
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=20.0,
+            headers={"User-Agent": "AI-Software-Auditor/1.0"},
+        ) as client:
+            response = await client.get(spec_url)
+            if response.status_code >= 400:
+                raise ValueError(f"Could not load OpenAPI spec — HTTP {response.status_code}")
+        project.status = "ready"
+        project.status_message = (
+            f"OpenAPI spec reachable at {spec_url}. "
+            "Verify domain ownership of the API host before scanning."
+        )
+    except httpx.HTTPError as exc:
+        project.status = "failed"
+        project.status_message = f"Could not reach API spec URL: {exc}"
+
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+async def update_project_auth(
+    db: AsyncSession,
+    project: Project,
+    payload: ProjectAuthUpdate,
+) -> Project:
+    project.auth_config = _serialize_auth(payload.auth)
+    if payload.active_dast_enabled is not None:
+        project.active_dast_enabled = bool(payload.active_dast_enabled)
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
 async def delete_project(db: AsyncSession, user: User, project: Project) -> None:
-    if project.source_type in ("website", "local"):
+    if project.source_type in ("website", "local", "api"):
         pass
     else:
         delete_project_dir(str(user.id), str(project.id))

@@ -40,6 +40,31 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "k8s-host-namespace": ("CWE-653", "A05:2021 - Security Misconfiguration"),
     "k8s-unpinned-image": ("CWE-1104", "A06:2021 - Vulnerable and Outdated Components"),
     "k8s-loadbalancer-no-netpol": ("CWE-284", "A01:2021 - Broken Access Control"),
+    # Active DAST
+    "active-xss-reflected": ("CWE-79", "A03:2021 - Injection"),
+    "active-sqli-error": ("CWE-89", "A03:2021 - Injection"),
+    "active-open-redirect": ("CWE-601", "A01:2021 - Broken Access Control"),
+    "active-path-traversal": ("CWE-22", "A01:2021 - Broken Access Control"),
+    "active-cors-wildcard-credentials": ("CWE-942", "A05:2021 - Security Misconfiguration"),
+    "active-cors-reflected-origin": ("CWE-942", "A05:2021 - Security Misconfiguration"),
+    "active-method-trace": ("CWE-693", "A05:2021 - Security Misconfiguration"),
+    "active-method-track": ("CWE-693", "A05:2021 - Security Misconfiguration"),
+    "active-methods-mutation-exposed": ("CWE-650", "A05:2021 - Security Misconfiguration"),
+    "active-verbose-error": ("CWE-209", "A05:2021 - Security Misconfiguration"),
+    "active-auth-bypass": ("CWE-287", "A07:2021 - Identification and Authentication Failures"),
+    # API security
+    "api-spec-load-failed": ("CWE-693", "A05:2021 - Security Misconfiguration"),
+    "api-no-server-url": ("CWE-693", "A05:2021 - Security Misconfiguration"),
+    "api-no-security-schemes": ("CWE-306", "API2:2023 - Broken Authentication"),
+    "api-no-global-security": ("CWE-306", "API2:2023 - Broken Authentication"),
+    "api-mass-assignment": ("CWE-915", "API6:2023 - Mass Assignment"),
+    "api-unauthenticated-data": ("CWE-306", "API2:2023 - Broken Authentication"),
+    "api-bola-numeric-id": ("CWE-639", "API1:2023 - Broken Object Level Authorization"),
+    "api-verbose-error": ("CWE-209", "API8:2023 - Security Misconfiguration"),
+    "api-sqli-error": ("CWE-89", "API10:2023 - Unsafe Consumption of APIs"),
+    "api-no-rate-limit": ("CWE-770", "API4:2023 - Unrestricted Resource Consumption"),
+    "api-function-level-auth": ("CWE-285", "API5:2023 - Broken Function Level Authorization"),
+    "api-http-base-url": ("CWE-319", "A02:2021 - Cryptographic Failures"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

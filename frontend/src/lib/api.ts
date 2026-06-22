@@ -12,7 +12,19 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip" | "folder" | "local" | "website";
+export type SourceType = "github" | "zip" | "folder" | "local" | "website" | "api";
+
+export type AuthType = "none" | "bearer" | "basic" | "cookie" | "header";
+
+export type AuthConfig = {
+  type: AuthType;
+  token?: string | null;
+  username?: string | null;
+  password?: string | null;
+  cookies?: string | null;
+  header_name?: string | null;
+  header_value?: string | null;
+};
 
 export type ApiProject = {
   id: string;
@@ -27,6 +39,9 @@ export type ApiProject = {
   domain_verified?: boolean;
   domain_verification_token?: string | null;
   pr_checks_enabled?: boolean;
+  active_dast_enabled?: boolean;
+  api_spec_url?: string | null;
+  has_auth_configured?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -394,10 +409,39 @@ export async function createWebsiteProject(
     website_url: string;
     description?: string;
     ownership_confirmed: boolean;
+    active_dast_enabled?: boolean;
+    auth?: AuthConfig | null;
   },
 ): Promise<ApiProject> {
   return apiFetch<ApiProject>("/api/projects/website", token, {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createApiProject(
+  token: string,
+  data: {
+    name: string;
+    api_spec_url: string;
+    description?: string;
+    ownership_confirmed: boolean;
+    auth?: AuthConfig | null;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/api", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectAuth(
+  token: string,
+  projectId: string,
+  data: { auth: AuthConfig; active_dast_enabled?: boolean | null },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>(`/api/projects/${projectId}/auth`, token, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
 }

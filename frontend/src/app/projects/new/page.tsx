@@ -6,6 +6,9 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import {
+  AuthConfig,
+  AuthType,
+  createApiProject,
   createGithubProject,
   createLocalProject,
   createWebsiteProject,
@@ -14,7 +17,7 @@ import {
   uploadZipProject,
 } from "@/lib/api";
 
-type Tab = "github" | "folder" | "zip" | "local" | "website";
+type Tab = "github" | "folder" | "zip" | "local" | "website" | "api";
 
 export default function NewProjectPage() {
   const { getToken } = useAuth();
@@ -33,12 +36,38 @@ export default function NewProjectPage() {
   const [localPath, setLocalPath] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
+  const [activeDastEnabled, setActiveDastEnabled] = useState(false);
+  const [apiSpecUrl, setApiSpecUrl] = useState("");
+
+  const [authType, setAuthType] = useState<AuthType>("none");
+  const [authToken, setAuthToken] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authCookies, setAuthCookies] = useState("");
+  const [authHeaderName, setAuthHeaderName] = useState("");
+  const [authHeaderValue, setAuthHeaderValue] = useState("");
 
   useEffect(() => {
     getApiFeatures().then((features) => {
       setLocalPathsEnabled(features.local_project_paths);
     });
   }, []);
+
+  function buildAuthConfig(): AuthConfig | null {
+    if (authType === "none") return null;
+    const cfg: AuthConfig = { type: authType };
+    if (authType === "bearer") cfg.token = authToken;
+    if (authType === "basic") {
+      cfg.username = authUsername;
+      cfg.password = authPassword;
+    }
+    if (authType === "cookie") cfg.cookies = authCookies;
+    if (authType === "header") {
+      cfg.header_name = authHeaderName;
+      cfg.header_value = authHeaderValue;
+    }
+    return cfg;
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -68,6 +97,20 @@ export default function NewProjectPage() {
           website_url: websiteUrl,
           description: description || undefined,
           ownership_confirmed: true,
+          active_dast_enabled: activeDastEnabled,
+          auth: buildAuthConfig(),
+        });
+        projectId = project.id;
+      } else if (tab === "api") {
+        if (!ownershipConfirmed) {
+          throw new Error("You must confirm you own or have permission to scan this API");
+        }
+        const project = await createApiProject(token, {
+          name,
+          api_spec_url: apiSpecUrl,
+          description: description || undefined,
+          ownership_confirmed: true,
+          auth: buildAuthConfig(),
         });
         projectId = project.id;
       } else if (tab === "folder") {
@@ -122,11 +165,13 @@ export default function NewProjectPage() {
       ? "Cloning repository..."
       : tab === "website"
         ? "Verifying website..."
-        : tab === "folder"
-          ? "Uploading folder..."
-          : tab === "local"
-            ? "Linking local folder..."
-            : "Uploading & extracting...";
+        : tab === "api"
+          ? "Loading OpenAPI spec..."
+          : tab === "folder"
+            ? "Uploading folder..."
+            : tab === "local"
+              ? "Linking local folder..."
+              : "Uploading & extracting...";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
@@ -139,7 +184,7 @@ export default function NewProjectPage() {
 
         <h1 className="mt-4 text-3xl font-bold tracking-tight">Create Project</h1>
         <p className="mt-2 text-zinc-400">
-          Open a local folder, connect GitHub, upload a ZIP, or scan a live website.
+          Audit a folder, GitHub repo, ZIP, live website, or REST API.
         </p>
         <p className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-200">
           Private GitHub repos are available on{" "}
@@ -166,6 +211,9 @@ export default function NewProjectPage() {
           </TabButton>
           <TabButton active={tab === "website"} onClick={() => setTab("website")}>
             Website
+          </TabButton>
+          <TabButton active={tab === "api"} onClick={() => setTab("api")}>
+            API
           </TabButton>
         </div>
 
@@ -266,6 +314,39 @@ export default function NewProjectPage() {
                   className={inputClass}
                 />
               </Field>
+
+              <label className="flex items-start gap-3 rounded-lg border border-rose-500/30 bg-rose-950/20 p-4">
+                <input
+                  type="checkbox"
+                  checked={activeDastEnabled}
+                  onChange={(e) => setActiveDastEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-rose-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  <span className="font-semibold text-rose-300">Enable Active DAST</span> — send
+                  safe, non-destructive probes (XSS / SQLi / open redirect / path traversal /
+                  verbose errors / CORS). Domain ownership verification is still required before
+                  any active scan runs.
+                </span>
+              </label>
+
+              <AuthSection
+                authType={authType}
+                setAuthType={setAuthType}
+                authToken={authToken}
+                setAuthToken={setAuthToken}
+                authUsername={authUsername}
+                setAuthUsername={setAuthUsername}
+                authPassword={authPassword}
+                setAuthPassword={setAuthPassword}
+                authCookies={authCookies}
+                setAuthCookies={setAuthCookies}
+                authHeaderName={authHeaderName}
+                setAuthHeaderName={setAuthHeaderName}
+                authHeaderValue={authHeaderValue}
+                setAuthHeaderValue={setAuthHeaderValue}
+              />
+
               <label className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
                 <input
                   type="checkbox"
@@ -276,6 +357,54 @@ export default function NewProjectPage() {
                 <span className="text-sm text-zinc-300">
                   I confirm I own this website or have explicit permission to run a security
                   scan against it.
+                </span>
+              </label>
+            </>
+          ) : tab === "api" ? (
+            <>
+              <Field label="OpenAPI Spec URL (3.x JSON or YAML)" required>
+                <input
+                  type="url"
+                  required
+                  value={apiSpecUrl}
+                  onChange={(e) => setApiSpecUrl(e.target.value)}
+                  placeholder="https://api.example.com/openapi.json"
+                  className={inputClass}
+                />
+                <p className="mt-2 text-xs text-zinc-500">
+                  Runs OWASP API Top 10 — BOLA, broken auth, mass assignment, verbose errors,
+                  SQLi, missing rate limits, function-level authorization, HTTPS, missing
+                  security schemes.
+                </p>
+              </Field>
+
+              <AuthSection
+                authType={authType}
+                setAuthType={setAuthType}
+                authToken={authToken}
+                setAuthToken={setAuthToken}
+                authUsername={authUsername}
+                setAuthUsername={setAuthUsername}
+                authPassword={authPassword}
+                setAuthPassword={setAuthPassword}
+                authCookies={authCookies}
+                setAuthCookies={setAuthCookies}
+                authHeaderName={authHeaderName}
+                setAuthHeaderName={setAuthHeaderName}
+                authHeaderValue={authHeaderValue}
+                setAuthHeaderValue={setAuthHeaderValue}
+              />
+
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                <input
+                  type="checkbox"
+                  checked={ownershipConfirmed}
+                  onChange={(e) => setOwnershipConfirmed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  I confirm I own this API or have explicit permission to run a security scan
+                  against it. Domain verification of the API host is required before scanning.
                 </span>
               </label>
             </>
@@ -352,6 +481,130 @@ function Field({
         {required && <span className="text-red-400"> *</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+function AuthSection(props: {
+  authType: AuthType;
+  setAuthType: (v: AuthType) => void;
+  authToken: string;
+  setAuthToken: (v: string) => void;
+  authUsername: string;
+  setAuthUsername: (v: string) => void;
+  authPassword: string;
+  setAuthPassword: (v: string) => void;
+  authCookies: string;
+  setAuthCookies: (v: string) => void;
+  authHeaderName: string;
+  setAuthHeaderName: (v: string) => void;
+  authHeaderValue: string;
+  setAuthHeaderValue: (v: string) => void;
+}) {
+  const {
+    authType,
+    setAuthType,
+    authToken,
+    setAuthToken,
+    authUsername,
+    setAuthUsername,
+    authPassword,
+    setAuthPassword,
+    authCookies,
+    setAuthCookies,
+    authHeaderName,
+    setAuthHeaderName,
+    authHeaderValue,
+    setAuthHeaderValue,
+  } = props;
+
+  return (
+    <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+      <Field label="Authentication (optional)">
+        <select
+          value={authType}
+          onChange={(e) => setAuthType(e.target.value as AuthType)}
+          className={inputClass}
+        >
+          <option value="none">No authentication (public scan)</option>
+          <option value="bearer">Bearer token (OAuth / JWT)</option>
+          <option value="basic">HTTP Basic auth</option>
+          <option value="cookie">Cookie header</option>
+          <option value="header">Custom header (e.g. X-API-Key)</option>
+        </select>
+      </Field>
+
+      {authType === "bearer" && (
+        <Field label="Bearer Token">
+          <input
+            type="password"
+            value={authToken}
+            onChange={(e) => setAuthToken(e.target.value)}
+            placeholder="eyJhbGciOi..."
+            className={inputClass}
+          />
+        </Field>
+      )}
+
+      {authType === "basic" && (
+        <>
+          <Field label="Username">
+            <input
+              type="text"
+              value={authUsername}
+              onChange={(e) => setAuthUsername(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Password">
+            <input
+              type="password"
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        </>
+      )}
+
+      {authType === "cookie" && (
+        <Field label="Cookie header value">
+          <input
+            type="text"
+            value={authCookies}
+            onChange={(e) => setAuthCookies(e.target.value)}
+            placeholder="session=abc123; csrf_token=xyz"
+            className={inputClass}
+          />
+        </Field>
+      )}
+
+      {authType === "header" && (
+        <>
+          <Field label="Header name">
+            <input
+              type="text"
+              value={authHeaderName}
+              onChange={(e) => setAuthHeaderName(e.target.value)}
+              placeholder="X-API-Key"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Header value">
+            <input
+              type="password"
+              value={authHeaderValue}
+              onChange={(e) => setAuthHeaderValue(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        </>
+      )}
+
+      <p className="text-xs text-zinc-500">
+        Credentials are stored server-side and used only for scanning this target. Never used to
+        write or modify data — read-only probes only.
+      </p>
     </div>
   );
 }

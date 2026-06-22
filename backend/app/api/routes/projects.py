@@ -9,6 +9,8 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.project import (
     DomainVerificationInfo,
+    ProjectAuthUpdate,
+    ProjectCreateApi,
     ProjectCreateGithub,
     ProjectCreateLocal,
     ProjectCreateWebsite,
@@ -64,6 +66,38 @@ async def create_website_project(
         project = await project_service.create_website_project(db, current_user, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.post("/api", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_api_project(
+    payload: ProjectCreateApi,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    try:
+        project = await project_service.create_api_project(db, current_user, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ProjectResponse.model_validate(project)
+
+
+@router.patch("/{project_id}/auth", response_model=ProjectResponse)
+async def update_project_auth(
+    project_id: UUID,
+    payload: ProjectAuthUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    project = await project_service.get_user_project(db, current_user.id, project_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.source_type not in ("website", "api"):
+        raise HTTPException(
+            status_code=400,
+            detail="Auth configuration applies to website and api projects only",
+        )
+    project = await project_service.update_project_auth(db, project, payload)
     return ProjectResponse.model_validate(project)
 
 
@@ -161,8 +195,8 @@ async def get_domain_verification(
     project = await project_service.get_user_project(db, current_user.id, project_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    if project.source_type != "website":
-        raise HTTPException(status_code=400, detail="Domain verification applies to website projects only")
+    if project.source_type not in ("website", "api"):
+        raise HTTPException(status_code=400, detail="Domain verification applies to website and api projects only")
     if not project.domain_verification_token:
         project.domain_verification_token = generate_verification_token()
         await db.commit()
@@ -187,8 +221,8 @@ async def verify_domain(
     project = await project_service.get_user_project(db, current_user.id, project_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    if project.source_type != "website":
-        raise HTTPException(status_code=400, detail="Domain verification applies to website projects only")
+    if project.source_type not in ("website", "api"):
+        raise HTTPException(status_code=400, detail="Domain verification applies to website and api projects only")
     if not project.domain_verification_token:
         project.domain_verification_token = generate_verification_token()
 

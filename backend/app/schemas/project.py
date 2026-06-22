@@ -11,6 +11,25 @@ class SourceType(str, Enum):
     folder = "folder"
     local = "local"
     website = "website"
+    api = "api"
+
+
+class AuthType(str, Enum):
+    none = "none"
+    bearer = "bearer"
+    basic = "basic"
+    cookie = "cookie"
+    header = "header"
+
+
+class AuthConfig(BaseModel):
+    type: AuthType = AuthType.none
+    token: str | None = Field(default=None, max_length=4000)
+    username: str | None = Field(default=None, max_length=200)
+    password: str | None = Field(default=None, max_length=200)
+    cookies: str | None = Field(default=None, max_length=4000)
+    header_name: str | None = Field(default=None, max_length=100)
+    header_value: str | None = Field(default=None, max_length=2000)
 
 
 class ProjectStatus(str, Enum):
@@ -34,6 +53,23 @@ class ProjectCreateWebsite(BaseModel):
     ownership_confirmed: bool = Field(
         description="User confirms they own or have permission to scan this website"
     )
+    active_dast_enabled: bool = Field(default=False)
+    auth: AuthConfig | None = None
+
+
+class ProjectCreateApi(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    api_spec_url: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=2000)
+    ownership_confirmed: bool = Field(
+        description="User confirms they own or have permission to scan this API"
+    )
+    auth: AuthConfig | None = None
+
+
+class ProjectAuthUpdate(BaseModel):
+    auth: AuthConfig
+    active_dast_enabled: bool | None = None
 
 
 class ProjectCreateLocal(BaseModel):
@@ -60,6 +96,9 @@ class ProjectResponse(BaseModel):
     domain_verified: bool = False
     domain_verification_token: str | None = None
     pr_checks_enabled: bool = False
+    active_dast_enabled: bool = False
+    api_spec_url: str | None = None
+    has_auth_configured: bool = False
     created_at: datetime
     updated_at: datetime
 

@@ -30,9 +30,9 @@ def execute_scan(scan_id: str) -> None:
             _fail_scan(session, scan, "Project not found")
             return
 
-        if project.source_type == "website":
+        if project.source_type in ("website", "api"):
             if project.status != "ready" or not project.repo_url:
-                _fail_scan(session, scan, "Website URL is not ready for scanning")
+                _fail_scan(session, scan, f"{project.source_type.title()} target is not ready for scanning")
                 return
         elif project.status != "ready" or not project.storage_path:
             _fail_scan(session, scan, "Project source code is not ready for scanning")
@@ -45,14 +45,36 @@ def execute_scan(scan_id: str) -> None:
 
         if project.source_type == "website":
             from app.scanners.website_scanner import scan_website
+            from app.scanners.active_dast import scan_active_dast
             from app.scanners.cwe_mappings import enrich_finding_tags
             from app.scanners.dedup import deduplicate_findings
+            from app.services.project_service import deserialize_auth
 
-            findings = [
-                enrich_finding_tags(f)
-                for f in deduplicate_findings(scan_website(project.repo_url))
-            ]
+            auth = deserialize_auth(project.auth_config)
+            raw_findings = scan_website(project.repo_url)
             scanners_used = ["website-security"]
+
+            if project.active_dast_enabled and project.domain_verified:
+                raw_findings.extend(scan_active_dast(project.repo_url, auth=auth))
+                scanners_used.append("active-dast")
+
+            findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
+
+        elif project.source_type == "api":
+            from app.scanners.api_scanner import scan_api
+            from app.scanners.cwe_mappings import enrich_finding_tags
+            from app.scanners.dedup import deduplicate_findings
+            from app.services.project_service import deserialize_auth
+
+            spec_url = project.api_spec_url or project.repo_url
+            if not spec_url:
+                _fail_scan(session, scan, "API project missing spec URL")
+                return
+            auth = deserialize_auth(project.auth_config)
+            raw_findings = scan_api(spec_url, auth=auth)
+            findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
+            scanners_used = ["api-security"]
+
         else:
             project_dir = _resolve_project_dir(project.storage_path)
             if not project_dir.exists():

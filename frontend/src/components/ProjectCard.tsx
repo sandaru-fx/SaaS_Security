@@ -15,6 +15,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   folder: "Local Folder",
   local: "Local Path",
   website: "Website",
+  api: "REST API",
 };
 
 export function ProjectCard({ project }: { project: ApiProject }) {
@@ -48,6 +49,21 @@ export function ProjectCard({ project }: { project: ApiProject }) {
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 capitalize text-zinc-400">
           {project.status}
         </span>
+        {project.active_dast_enabled && (
+          <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 font-medium text-rose-300">
+            Active DAST
+          </span>
+        )}
+        {project.has_auth_configured && (
+          <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-300">
+            Auth
+          </span>
+        )}
+        {project.source_type === "api" && (
+          <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 font-medium text-cyan-300">
+            OWASP API Top 10
+          </span>
+        )}
       </div>
 
       {project.repo_url && (
