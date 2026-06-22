@@ -54,6 +54,7 @@ class ProjectCreateWebsite(BaseModel):
         description="User confirms they own or have permission to scan this website"
     )
     active_dast_enabled: bool = Field(default=False)
+    browser_dast_enabled: bool = Field(default=False)
     asm_enabled: bool = Field(default=False)
     auth: AuthConfig | None = None
 
@@ -72,6 +73,7 @@ class ProjectCreateApi(BaseModel):
 class ProjectAuthUpdate(BaseModel):
     auth: AuthConfig
     active_dast_enabled: bool | None = None
+    browser_dast_enabled: bool | None = None
     asm_enabled: bool | None = None
 
 
@@ -105,6 +107,7 @@ class ProjectResponse(BaseModel):
     domain_verification_token: str | None = None
     pr_checks_enabled: bool = False
     active_dast_enabled: bool = False
+    browser_dast_enabled: bool = False
     api_spec_url: str | None = None
     has_auth_configured: bool = False
     asm_enabled: bool = False

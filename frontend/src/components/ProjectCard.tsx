@@ -54,6 +54,11 @@ export function ProjectCard({ project }: { project: ApiProject }) {
             Active DAST
           </span>
         )}
+        {project.browser_dast_enabled && (
+          <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-300">
+            Browser DAST
+          </span>
+        )}
         {project.has_auth_configured && (
           <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-300">
             Auth

@@ -170,6 +170,16 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "ws-cleartext-in-code": ("CWE-319", "A02:2021 - Cryptographic Failures"),
     "ws-origin-check-disabled": ("CWE-346", "A05:2021 - Security Misconfiguration"),
     "ws-wildcard-origin": ("CWE-942", "A05:2021 - Security Misconfiguration"),
+    # Browser DAST (Playwright)
+    "browser-dom-xss": ("CWE-79", "A03:2021 - Injection"),
+    "browser-csp-missing": ("CWE-1021", "A05:2021 - Security Misconfiguration"),
+    "browser-csp-unsafe-inline": ("CWE-1021", "A05:2021 - Security Misconfiguration"),
+    "browser-csp-unsafe-eval": ("CWE-1021", "A05:2021 - Security Misconfiguration"),
+    "browser-sensitive-web-storage": ("CWE-922", "A02:2021 - Cryptographic Failures"),
+    "browser-spa-routes-crawled": ("CWE-200", "A01:2021 - Broken Access Control"),
+    "browser-prototype-pollution": ("CWE-1321", "A08:2021 - Software and Data Integrity Failures"),
+    "browser-prototype-pollution-reflected": ("CWE-1321", "A08:2021 - Software and Data Integrity Failures"),
+    "browser-console-verbose-error": ("CWE-209", "A05:2021 - Security Misconfiguration"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

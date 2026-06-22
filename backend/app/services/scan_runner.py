@@ -79,6 +79,17 @@ def execute_scan(scan_id: str) -> None:
                     except Exception as exc:
                         logger.debug("Active DAST on ASM host %s failed: %s", host_url, exc)
 
+            if project.browser_dast_enabled and project.domain_verified:
+                try:
+                    from app.scanners.browser_dast import scan_browser_dast
+
+                    browser_findings = scan_browser_dast(project.repo_url, auth=auth)
+                    if browser_findings:
+                        raw_findings.extend(browser_findings)
+                        scanners_used.append("browser-dast")
+                except Exception as exc:
+                    logger.warning("Browser DAST failed for %s: %s", project.repo_url, exc)
+
             if project.domain_verified:
                 raw_findings.extend(_run_graphql_ws_live(project.repo_url, auth, scanners_used))
 

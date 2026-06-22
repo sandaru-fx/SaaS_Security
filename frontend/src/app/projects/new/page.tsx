@@ -37,6 +37,7 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [activeDastEnabled, setActiveDastEnabled] = useState(false);
+  const [browserDastEnabled, setBrowserDastEnabled] = useState(false);
   const [asmEnabled, setAsmEnabled] = useState(false);
   const [apiSpecUrl, setApiSpecUrl] = useState("");
 
@@ -99,6 +100,7 @@ export default function NewProjectPage() {
           description: description || undefined,
           ownership_confirmed: true,
           active_dast_enabled: activeDastEnabled,
+          browser_dast_enabled: browserDastEnabled,
           asm_enabled: asmEnabled,
           auth: buildAuthConfig(),
         });
@@ -330,6 +332,23 @@ export default function NewProjectPage() {
                   safe, non-destructive probes (XSS / SQLi / open redirect / path traversal /
                   verbose errors / CORS). Domain ownership verification is still required before
                   any active scan runs.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-4">
+                <input
+                  type="checkbox"
+                  checked={browserDastEnabled}
+                  onChange={(e) => setBrowserDastEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500"
+                />
+                <span className="text-sm text-zinc-300">
+                  <span className="font-semibold text-indigo-300">
+                    Enable Browser DAST (Headless Chromium)
+                  </span>{" "}
+                  — Playwright renders JS SPAs and probes DOM XSS, CSP misconfig, sensitive
+                  web storage, prototype pollution hints, and client-side routes. Domain
+                  verification required.
                 </span>
               </label>
 

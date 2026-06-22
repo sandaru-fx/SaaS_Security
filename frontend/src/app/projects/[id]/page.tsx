@@ -252,10 +252,16 @@ export default function ProjectDetailPage() {
                 <DetailRow label="Files" value={String(project.file_count)} />
               )}
               {project.source_type === "website" && (
-                <DetailRow
-                  label="Active DAST"
-                  value={project.active_dast_enabled ? "Enabled" : "Disabled"}
-                />
+                <>
+                  <DetailRow
+                    label="Active DAST"
+                    value={project.active_dast_enabled ? "Enabled" : "Disabled"}
+                  />
+                  <DetailRow
+                    label="Browser DAST"
+                    value={project.browser_dast_enabled ? "Enabled" : "Disabled"}
+                  />
+                </>
               )}
               {liveTarget && (
                 <DetailRow
@@ -586,6 +592,7 @@ function ActiveDastPanel({
   const [headerName, setHeaderName] = useState("");
   const [headerValue, setHeaderValue] = useState("");
   const [activeDast, setActiveDast] = useState(project.active_dast_enabled ?? false);
+  const [browserDast, setBrowserDast] = useState(project.browser_dast_enabled ?? false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
@@ -612,6 +619,7 @@ function ActiveDastPanel({
       const updated = await updateProjectAuth(jwt, project.id, {
         auth: buildAuth(),
         active_dast_enabled: project.source_type === "website" ? activeDast : null,
+        browser_dast_enabled: project.source_type === "website" ? browserDast : null,
       });
       onUpdate(updated);
       setSavedAt(new Date());
@@ -649,6 +657,20 @@ function ActiveDastPanel({
           />
           <span className="text-sm text-zinc-300">
             Enable Active DAST probes on next scan
+          </span>
+        </label>
+      )}
+
+      {project.source_type === "website" && (
+        <label className="mt-3 flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={browserDast}
+            onChange={(e) => setBrowserDast(e.target.checked)}
+            className="h-4 w-4 rounded border-zinc-600"
+          />
+          <span className="text-sm text-zinc-300">
+            Enable Browser DAST (Headless Chromium) on next scan
           </span>
         </label>
       )}
