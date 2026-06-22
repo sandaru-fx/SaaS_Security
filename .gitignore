@@ -44,3 +44,5 @@ redis_data/
 # Uploads / temp scan files
 uploads/
 tmp/
+backend/data/
+*.db

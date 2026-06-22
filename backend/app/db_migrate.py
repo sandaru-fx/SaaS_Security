@@ -43,6 +43,9 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
 
 
 async def run_additive_migrations(conn: AsyncConnection) -> None:
+    if conn.dialect.name == "sqlite":
+        return
+
     for table, column, col_type in ADDITIVE_COLUMNS:
         try:
             await conn.execute(

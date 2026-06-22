@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -12,12 +11,12 @@ class Issue(Base):
     __tablename__ = "issues"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     scan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("scans.id", ondelete="CASCADE"),
         index=True,
     )
@@ -34,7 +33,7 @@ class Issue(Base):
     rule_id: Mapped[str] = mapped_column(String(200))
     scanner: Mapped[str] = mapped_column(String(50))
     confidence: Mapped[str] = mapped_column(String(20), default="medium")
-    extra_data: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    extra_data: Mapped[dict] = mapped_column(JSON, nullable=True)
     dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
     dismissed_reason: Mapped[str] = mapped_column(Text, nullable=True)
     dismissed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

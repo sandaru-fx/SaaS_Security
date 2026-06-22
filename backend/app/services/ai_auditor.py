@@ -4,7 +4,7 @@ Turns raw scanner findings into professional, business-language audit
 narratives in the signature format: Problem -> Impact -> Business Risk -> Fix
 -> Priority.
 
-When an OpenAI API key is configured the layer uses an LLM for richer,
+When a Gemini or OpenAI API key is configured the layer uses an LLM for richer,
 context-aware narratives. Without a key it falls back to a deterministic,
 rule-based generator so the product works fully offline.
 """
@@ -179,6 +179,44 @@ def _build_ai_prompt(scan: Scan, issues: list[Issue]) -> str:
     return "\n".join(lines)
 
 
+def _generate_with_gemini(scan: Scan, issues: list[Issue]) -> dict | None:
+    settings = get_settings()
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=settings.gemini_api_key)
+        system = (
+            "You are a senior software auditor writing for a non-technical "
+            "executive. Convert technical findings into clear business "
+            "language. Always respond as strict JSON with keys: "
+            "summary (string), business_risk (string), recommendations "
+            "(array of short strings, max 6)."
+        )
+        user = _build_ai_prompt(scan, issues)
+
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=f"{system}\n\n{user}",
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3,
+            ),
+        )
+        content = response.text or "{}"
+        data = json.loads(content)
+        return {
+            "summary": str(data.get("summary", "")).strip(),
+            "business_risk": str(data.get("business_risk", "")).strip(),
+            "recommendations": [
+                str(r).strip() for r in data.get("recommendations", []) if str(r).strip()
+            ][:6],
+        }
+    except Exception as exc:  # pragma: no cover - network/SDK errors
+        logger.warning("Gemini audit generation failed, using fallback: %s", exc)
+        return None
+
+
 def _generate_with_openai(scan: Scan, issues: list[Issue]) -> dict | None:
     settings = get_settings()
     try:
@@ -236,11 +274,17 @@ def enrich_scan_with_ai(scan: Scan, issues: list[Issue], *, allow_deep_audit: bo
         ai_result = None
         provider = "rule-based"
         if get_settings().ai_enabled and allow_deep_audit:
-            ai_result = _generate_with_openai(scan, issues)
-            if ai_result and ai_result.get("summary"):
-                provider = "openai"
+            settings = get_settings()
+            if settings.gemini_api_key:
+                ai_result = _generate_with_gemini(scan, issues)
+                if ai_result and ai_result.get("summary"):
+                    provider = "gemini"
+            elif settings.openai_api_key:
+                ai_result = _generate_with_openai(scan, issues)
+                if ai_result and ai_result.get("summary"):
+                    provider = "openai"
 
-        if ai_result and provider == "openai":
+        if ai_result and provider in ("openai", "gemini"):
             scan.ai_summary = ai_result["summary"]
             scan.ai_business_risk = ai_result["business_risk"] or _rule_based_business_risk(
                 scan, issues

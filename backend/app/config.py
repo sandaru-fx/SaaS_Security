@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = ""
 
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_pro: str = ""
@@ -47,6 +50,16 @@ class Settings(BaseSettings):
     max_zip_files: int = 5000
 
     @property
+    def sync_database_url(self) -> str:
+        if self.database_url.startswith("sqlite+aiosqlite"):
+            return self.database_url.replace("sqlite+aiosqlite", "sqlite", 1)
+        return self.database_url
+
+    @property
+    def is_sqlite(self) -> bool:
+        return self.database_url.startswith("sqlite")
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
@@ -56,7 +69,7 @@ class Settings(BaseSettings):
 
     @property
     def ai_enabled(self) -> bool:
-        return bool(self.openai_api_key)
+        return bool(self.openai_api_key or self.gemini_api_key)
 
     @property
     def stripe_enabled(self) -> bool:

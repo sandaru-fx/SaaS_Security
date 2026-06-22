@@ -7,11 +7,11 @@ from app.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.environment == "development",
-    pool_pre_ping=True,
-)
+_engine_kwargs: dict = {"echo": settings.environment == "development", "pool_pre_ping": True}
+if not settings.is_sqlite:
+    _engine_kwargs["connect_args"] = {"connect_timeout": 15}
+
+engine = create_async_engine(settings.database_url, **_engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     engine,
