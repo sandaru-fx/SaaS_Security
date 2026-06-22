@@ -1,0 +1,42 @@
+import uuid
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.database import Base
+
+
+class Issue(Base):
+    __tablename__ = "issues"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    scan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("scans.id", ondelete="CASCADE"),
+        index=True,
+    )
+    category: Mapped[str] = mapped_column(String(50))
+    severity: Mapped[str] = mapped_column(String(20))
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text)
+    impact: Mapped[str] = mapped_column(Text)
+    fix_recommendation: Mapped[str] = mapped_column(Text)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=True)
+    line_start: Mapped[int] = mapped_column(Integer, default=0)
+    line_end: Mapped[int] = mapped_column(Integer, default=0)
+    rule_id: Mapped[str] = mapped_column(String(200))
+    scanner: Mapped[str] = mapped_column(String(50))
+    confidence: Mapped[str] = mapped_column(String(20), default="medium")
+    extra_data: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    scan = relationship("Scan", back_populates="issues")

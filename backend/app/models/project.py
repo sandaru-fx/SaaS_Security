@@ -41,3 +41,4 @@ class Project(Base):
     )
 
     user = relationship("User", back_populates="projects")
+    scans = relationship("Scan", back_populates="project", cascade="all, delete-orphan")

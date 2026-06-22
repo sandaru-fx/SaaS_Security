@@ -33,6 +33,46 @@ export type ProjectListResponse = {
   total: number;
 };
 
+export type ScanStatus = "queued" | "running" | "completed" | "failed";
+export type IssueSeverity = "critical" | "high" | "medium" | "low";
+
+export type ApiScan = {
+  id: string;
+  project_id: string;
+  status: ScanStatus;
+  scanners_used: string[];
+  total_issues: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type ApiIssue = {
+  id: string;
+  scan_id: string;
+  category: string;
+  severity: IssueSeverity;
+  title: string;
+  description: string;
+  impact: string;
+  fix_recommendation: string;
+  file_path: string | null;
+  line_start: number;
+  line_end: number;
+  rule_id: string;
+  scanner: string;
+  confidence: string;
+  created_at: string;
+};
+
+export type ScanListResponse = { scans: ApiScan[]; total: number };
+export type IssueListResponse = { issues: ApiIssue[]; total: number };
+
 export async function apiFetch<T>(
   path: string,
   token: string,
@@ -128,4 +168,28 @@ export async function updateProject(
 
 export async function deleteProject(token: string, projectId: string): Promise<void> {
   await apiFetch<void>(`/api/projects/${projectId}`, token, { method: "DELETE" });
+}
+
+export async function startScan(token: string, projectId: string): Promise<ApiScan> {
+  return apiFetch<ApiScan>(`/api/projects/${projectId}/scans`, token, { method: "POST" });
+}
+
+export async function listScans(token: string, projectId: string): Promise<ScanListResponse> {
+  return apiFetch<ScanListResponse>(`/api/projects/${projectId}/scans`, token);
+}
+
+export async function getScan(token: string, scanId: string): Promise<ApiScan> {
+  return apiFetch<ApiScan>(`/api/scans/${scanId}`, token);
+}
+
+export async function listScanIssues(
+  token: string,
+  scanId: string,
+  filters?: { severity?: string; category?: string },
+): Promise<IssueListResponse> {
+  const params = new URLSearchParams();
+  if (filters?.severity) params.set("severity", filters.severity);
+  if (filters?.category) params.set("category", filters.category);
+  const qs = params.toString();
+  return apiFetch<IssueListResponse>(`/api/scans/${scanId}/issues${qs ? `?${qs}` : ""}`, token);
 }

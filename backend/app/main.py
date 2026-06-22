@@ -3,10 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, projects, users
+from app.api.routes import health, projects, scans, users
 from app.config import get_settings
 from app.database import Base, engine
+from app.models import issue as issue_model  # noqa: F401
 from app.models import project as project_model  # noqa: F401
+from app.models import scan as scan_model  # noqa: F401
 from app.models import user as user_model  # noqa: F401
 
 settings = get_settings()
@@ -37,6 +39,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
+app.include_router(scans.router, prefix="/api")
 
 
 @app.get("/")
@@ -47,4 +50,5 @@ async def root() -> dict:
         "health": "/api/health",
         "auth": "/api/users/me",
         "projects": "/api/projects",
+        "scans": "/api/scans",
     }

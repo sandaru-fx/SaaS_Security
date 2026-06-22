@@ -39,6 +39,15 @@ SaaS_2/
 - [x] Project dashboard UI
 - [x] Local file storage with auto cleanup on delete
 
+### Phase 4 — Scan Engine
+- [x] Security pattern scanner
+- [x] Secrets detection scanner
+- [x] Dependency vulnerability scan (OSV API)
+- [x] Semgrep integration (when installed)
+- [x] Celery worker + background fallback
+- [x] Scan & Issue database tables
+- [x] Scan results UI with severity filters
+
 ## Prerequisites
 
 - **Node.js** 18+
@@ -131,6 +140,10 @@ SaaS_2/
 | `GET /api/projects/{id}` | Yes | Get project details |
 | `PATCH /api/projects/{id}` | Yes | Update project |
 | `DELETE /api/projects/{id}` | Yes | Delete project + files |
+| `POST /api/projects/{id}/scans` | Yes | Start security audit |
+| `GET /api/projects/{id}/scans` | Yes | List project scans |
+| `GET /api/scans/{id}` | Yes | Get scan status |
+| `GET /api/scans/{id}/issues` | Yes | List scan issues |
 | `GET /docs` | No | Swagger UI |
 
 ## Frontend Routes
@@ -144,7 +157,8 @@ SaaS_2/
 | `/profile` | Protected | Profile settings |
 | `/projects` | Protected | Project list |
 | `/projects/new` | Protected | Create project |
-| `/projects/[id]` | Protected | Project details |
+| `/projects/[id]` | Protected | Project details + start audit |
+| `/projects/[id]/scans/[scanId]` | Protected | Scan results |
 
 ## Development Phases
 
@@ -153,7 +167,7 @@ SaaS_2/
 | 01 | Foundation | ✅ Done |
 | 02 | Auth & Users | ✅ Done |
 | 03 | Projects & Repo | ✅ Done |
-| 04 | Scan Engine | Pending |
+| 04 | Scan Engine | ✅ Done |
 | 05 | Report & Score | Pending |
 | 06 | AI Layer | Pending |
 | 07 | Extended Scans | Pending |

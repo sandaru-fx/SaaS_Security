@@ -1,3 +1,6 @@
 celery[redis]==5.4.0
 redis==5.2.1
+sqlalchemy==2.0.36
+psycopg[binary]==3.3.4
+httpx==0.28.1
 pydantic-settings==2.7.0
