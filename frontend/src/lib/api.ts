@@ -102,6 +102,9 @@ export type ApiIssue = {
   ai_triage_verdict: string | null;
   ai_triage_reason: string | null;
   ai_fix_suggestion: string | null;
+  reachable: string | null;
+  reachable_files: string | null;
+  taint_verified: boolean;
   created_at: string;
 };
 

@@ -41,7 +41,31 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           {issue.cwe_id && <Badge label={issue.cwe_id} />}
           {issue.owasp_category && <Badge label={issue.owasp_category} />}
           <Badge label={issue.scanner} />
+          {issue.taint_verified && <Badge label="Taint verified" tone="violet" />}
+          {issue.reachable === "yes" && <Badge label="Reachable" tone="rose" />}
+          {issue.reachable === "no" && <Badge label="Not reached" tone="zinc" />}
         </div>
+
+        {issue.reachable === "yes" && issue.reachable_files && (
+          <Section
+            title="Reachable from"
+            content={`Imported in: ${issue.reachable_files}`}
+            highlight
+          />
+        )}
+        {issue.reachable === "no" && (
+          <Section
+            title="Reachability"
+            content="No import / require / use statement was found for this dependency in your source code. The CVE is unlikely to be exploitable through your code paths. Severity was reduced one notch."
+          />
+        )}
+        {issue.taint_verified && (
+          <Section
+            title="Taint Analysis"
+            content="Source-to-sink data flow verified: user-controlled input reaches this dangerous sink. This is a confirmed exploitable path, not a regex guess."
+            highlight
+          />
+        )}
 
         {issue.ai_triage_reason && (
           <Section title="AI Triage" content={issue.ai_triage_reason} warn />
@@ -116,16 +140,21 @@ function Section({
   );
 }
 
-function Badge({ label, warn = false }: { label: string; warn?: boolean }) {
+function Badge({
+  label,
+  warn = false,
+  tone = "default",
+}: {
+  label: string;
+  warn?: boolean;
+  tone?: "default" | "violet" | "rose" | "zinc";
+}) {
+  let cls = "border-zinc-700 text-zinc-300";
+  if (warn) cls = "border-amber-500/40 text-amber-300";
+  else if (tone === "violet") cls = "border-violet-500/40 bg-violet-500/10 text-violet-300";
+  else if (tone === "rose") cls = "border-rose-500/40 bg-rose-500/10 text-rose-300";
+  else if (tone === "zinc") cls = "border-zinc-700 bg-zinc-800/40 text-zinc-400";
   return (
-    <span
-      className={`rounded-full border px-2.5 py-1 text-xs capitalize ${
-        warn
-          ? "border-amber-500/40 text-amber-300"
-          : "border-zinc-700 text-zinc-300"
-      }`}
-    >
-      {label}
-    </span>
+    <span className={`rounded-full border px-2.5 py-1 text-xs capitalize ${cls}`}>{label}</span>
   );
 }

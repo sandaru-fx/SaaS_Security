@@ -59,6 +59,30 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
           </span>
         )}
         <span className="rounded border border-zinc-800 px-2 py-0.5">{issue.scanner}</span>
+        {issue.taint_verified && (
+          <span
+            className="rounded border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 font-medium text-violet-300"
+            title="Source-to-sink taint flow verified — high confidence"
+          >
+            Taint verified
+          </span>
+        )}
+        {issue.reachable === "yes" && (
+          <span
+            className="rounded border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 font-medium text-rose-300"
+            title={issue.reachable_files ?? undefined}
+          >
+            Reachable in code
+          </span>
+        )}
+        {issue.reachable === "no" && (
+          <span
+            className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"
+            title="No import / require / use statement found for this dependency in your source"
+          >
+            Not reached (severity reduced)
+          </span>
+        )}
       </div>
     </button>
   );
