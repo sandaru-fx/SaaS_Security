@@ -1,12 +1,21 @@
 import Link from "next/link";
 
-import { ApiProject } from "@/lib/api";
+import { ApiProject, SourceType } from "@/lib/api";
 
 const statusStyles: Record<ApiProject["status"], string> = {
   pending: "bg-zinc-600",
   processing: "bg-amber-500",
   ready: "bg-emerald-500",
   failed: "bg-red-500",
+};
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  github: "GitHub",
+  zip: "ZIP Upload",
+  folder: "Local Folder",
+  local: "Local Path",
+  website: "Website",
+  api: "REST API",
 };
 
 export function ProjectCard({ project }: { project: ApiProject }) {
@@ -30,7 +39,7 @@ export function ProjectCard({ project }: { project: ApiProject }) {
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">
-          {project.source_type === "github" ? "GitHub" : "ZIP Upload"}
+          {SOURCE_LABELS[project.source_type] ?? project.source_type}
         </span>
         {project.file_count > 0 && (
           <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-400">
@@ -40,6 +49,21 @@ export function ProjectCard({ project }: { project: ApiProject }) {
         <span className="rounded-full border border-zinc-700 px-2.5 py-1 capitalize text-zinc-400">
           {project.status}
         </span>
+        {project.active_dast_enabled && (
+          <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 font-medium text-rose-300">
+            Active DAST
+          </span>
+        )}
+        {project.has_auth_configured && (
+          <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-300">
+            Auth
+          </span>
+        )}
+        {project.source_type === "api" && (
+          <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 font-medium text-cyan-300">
+            OWASP API Top 10
+          </span>
+        )}
       </div>
 
       {project.repo_url && (

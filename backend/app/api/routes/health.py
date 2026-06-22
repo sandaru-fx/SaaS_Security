@@ -17,6 +17,9 @@ async def health_check() -> dict:
         "service": settings.app_name,
         "version": settings.app_version,
         "environment": settings.environment,
+        "features": {
+            "local_project_paths": settings.local_paths_enabled,
+        },
     }
 
 

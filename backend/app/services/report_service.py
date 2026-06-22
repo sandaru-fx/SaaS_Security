@@ -44,6 +44,7 @@ ISSUE_CATEGORY_MAP = {
     "performance": "performance",
     "quality": "quality",
     "devops": "devops",
+    "iac": "devops",
 }
 
 AUDIT_CATEGORIES = ["security", "architecture", "performance", "quality", "devops"]

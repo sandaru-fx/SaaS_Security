@@ -34,6 +34,8 @@ async def get_pricing() -> PricingResponse:
         ]
         if config["pdf_export"]:
             features.append("PDF report export")
+        if config.get("sbom_export"):
+            features.append("CycloneDX SBOM export")
         if config["deep_audit"]:
             features.append("AI Deep Audit")
         if config["private_repos"]:

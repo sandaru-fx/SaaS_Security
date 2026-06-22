@@ -56,6 +56,23 @@ export function ScanComparePanel({ comparison, loading }: ScanComparePanelProps)
         <Metric label="High" value={comparison.high_delta} invert />
       </div>
 
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        <RemediationMetric label="Fixed" value={comparison.fixed_count} tone="good" />
+        <RemediationMetric label="New" value={comparison.new_count} tone="bad" />
+        <RemediationMetric label="Recurring" value={comparison.recurring_count} tone="neutral" />
+      </div>
+
+      {(comparison.fixed_issues.length > 0 || comparison.new_issues.length > 0) && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {comparison.fixed_issues.length > 0 && (
+            <RemediationList title="Fixed issues" items={comparison.fixed_issues} tone="good" />
+          )}
+          {comparison.new_issues.length > 0 && (
+            <RemediationList title="New issues" items={comparison.new_issues} tone="bad" />
+          )}
+        </div>
+      )}
+
       <div className="mt-6">
         <p className="mb-3 text-xs uppercase tracking-widest text-zinc-500">Category Changes</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -111,6 +128,54 @@ function Metric({
       <p className="mt-1 text-xl font-bold">
         {value == null ? "—" : <Delta value={value} invert={invert} />}
       </p>
+    </div>
+  );
+}
+
+function RemediationMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "good" | "bad" | "neutral";
+}) {
+  const colors = {
+    good: "text-emerald-400",
+    bad: "text-red-400",
+    neutral: "text-zinc-300",
+  };
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-center">
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className={`mt-1 text-xl font-bold ${colors[tone]}`}>{value}</p>
+    </div>
+  );
+}
+
+function RemediationList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: ScanCompareResult["fixed_issues"];
+  tone: "good" | "bad";
+}) {
+  const border = tone === "good" ? "border-emerald-500/30" : "border-red-500/30";
+  return (
+    <div className={`rounded-lg border ${border} bg-zinc-950/40 p-4`}>
+      <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">{title}</p>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={`${item.rule_id}-${item.title}`} className="text-sm text-zinc-300">
+            <span className="capitalize text-zinc-500">{item.severity}</span>
+            {" · "}
+            {item.title}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

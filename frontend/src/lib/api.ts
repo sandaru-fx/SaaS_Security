@@ -12,7 +12,19 @@ export type ApiUser = {
 };
 
 export type ProjectStatus = "pending" | "processing" | "ready" | "failed";
-export type SourceType = "github" | "zip";
+export type SourceType = "github" | "zip" | "folder" | "local" | "website" | "api";
+
+export type AuthType = "none" | "bearer" | "basic" | "cookie" | "header";
+
+export type AuthConfig = {
+  type: AuthType;
+  token?: string | null;
+  username?: string | null;
+  password?: string | null;
+  cookies?: string | null;
+  header_name?: string | null;
+  header_value?: string | null;
+};
 
 export type ApiProject = {
   id: string;
@@ -24,6 +36,12 @@ export type ApiProject = {
   status: ProjectStatus;
   status_message: string | null;
   file_count: number;
+  domain_verified?: boolean;
+  domain_verification_token?: string | null;
+  pr_checks_enabled?: boolean;
+  active_dast_enabled?: boolean;
+  api_spec_url?: string | null;
+  has_auth_configured?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -79,7 +97,22 @@ export type ApiIssue = {
   report_category: string | null;
   dismissed: boolean;
   dismissed_reason: string | null;
+  cwe_id: string | null;
+  owasp_category: string | null;
+  ai_triage_verdict: string | null;
+  ai_triage_reason: string | null;
+  ai_fix_suggestion: string | null;
   created_at: string;
+};
+
+export type AuditChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AuditChatResponse = {
+  reply: string;
+  provider: string;
 };
 
 export type CategoryScore = {
@@ -105,6 +138,16 @@ export type AuditReport = {
   ai_business_risk: string | null;
   ai_recommendations: string[];
   ai_provider: string | null;
+  compliance: ComplianceControl[];
+};
+
+export type ComplianceControl = {
+  framework: string;
+  control_id: string;
+  title: string;
+  issue_count: number;
+  max_severity: string;
+  status: string;
 };
 
 export type ScanListResponse = { scans: ApiScan[]; total: number };
@@ -176,10 +219,23 @@ export type ScanCompareResult = {
   low_delta: number;
   category_deltas: Record<string, number | null>;
   improved: boolean;
+  fixed_count: number;
+  new_count: number;
+  recurring_count: number;
+  fixed_issues: RemediationItem[];
+  new_issues: RemediationItem[];
+};
+
+export type RemediationItem = {
+  title: string;
+  severity: IssueSeverity;
+  rule_id: string;
+  file_path: string | null;
 };
 
 export type PlanFeatures = {
   pdf_export: boolean;
+  sbom_export: boolean;
   deep_audit: boolean;
   private_repos: boolean;
   unlimited_scans: boolean;
@@ -300,6 +356,96 @@ export async function uploadZipProject(
   });
 }
 
+export async function uploadFolderProject(
+  token: string,
+  data: { name: string; files: File[]; description?: string },
+): Promise<ApiProject> {
+  const formData = new FormData();
+  formData.append("name", data.name);
+  if (data.description) {
+    formData.append("description", data.description);
+  }
+  for (const file of data.files) {
+    const relativePath = file.webkitRelativePath || file.name;
+    formData.append("files", file, relativePath);
+  }
+
+  const response = await fetch(`${API_URL}/api/projects/folder`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Folder upload failed" }));
+    const detail = error.detail;
+    throw new Error(typeof detail === "string" ? detail : "Folder upload failed");
+  }
+  return response.json();
+}
+
+export async function createLocalProject(
+  token: string,
+  data: { name: string; local_path: string; description?: string },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/local", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getApiFeatures(): Promise<{ local_project_paths: boolean }> {
+  const response = await fetch(`${API_URL}/api/health`);
+  if (!response.ok) {
+    return { local_project_paths: false };
+  }
+  const data = await response.json();
+  return data.features ?? { local_project_paths: false };
+}
+
+export async function createWebsiteProject(
+  token: string,
+  data: {
+    name: string;
+    website_url: string;
+    description?: string;
+    ownership_confirmed: boolean;
+    active_dast_enabled?: boolean;
+    auth?: AuthConfig | null;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/website", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createApiProject(
+  token: string,
+  data: {
+    name: string;
+    api_spec_url: string;
+    description?: string;
+    ownership_confirmed: boolean;
+    auth?: AuthConfig | null;
+  },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>("/api/projects/api", token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectAuth(
+  token: string,
+  projectId: string,
+  data: { auth: AuthConfig; active_dast_enabled?: boolean | null },
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>(`/api/projects/${projectId}/auth`, token, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function updateProject(
   token: string,
   projectId: string,
@@ -313,6 +459,54 @@ export async function updateProject(
 
 export async function deleteProject(token: string, projectId: string): Promise<void> {
   await apiFetch<void>(`/api/projects/${projectId}`, token, { method: "DELETE" });
+}
+
+export type DomainVerificationInfo = {
+  domain: string;
+  token: string;
+  dns_record_name: string;
+  dns_record_value: string;
+  meta_tag: string;
+  verified: boolean;
+};
+
+export async function getDomainVerification(
+  token: string,
+  projectId: string,
+): Promise<DomainVerificationInfo> {
+  return apiFetch<DomainVerificationInfo>(`/api/projects/${projectId}/domain-verification`, token);
+}
+
+export async function verifyDomain(
+  token: string,
+  projectId: string,
+): Promise<DomainVerificationInfo> {
+  return apiFetch<DomainVerificationInfo>(`/api/projects/${projectId}/verify-domain`, token, {
+    method: "POST",
+  });
+}
+
+export async function updateProjectPrChecks(
+  token: string,
+  projectId: string,
+  enabled: boolean,
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>(`/api/projects/${projectId}/pr-checks`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function updateGithubPat(
+  token: string,
+  github_pat: string | null,
+): Promise<{ github_pat_configured: boolean }> {
+  const user = await apiFetch<ApiUser & { github_pat_configured: boolean }>(
+    "/api/users/me/github-pat",
+    token,
+    { method: "PATCH", body: JSON.stringify({ github_pat }) },
+  );
+  return { github_pat_configured: user.github_pat_configured };
 }
 
 export async function startScan(token: string, projectId: string): Promise<ApiScan> {
@@ -341,6 +535,17 @@ export async function listScanIssues(
 
 export async function getAuditReport(token: string, scanId: string): Promise<AuditReport> {
   return apiFetch<AuditReport>(`/api/scans/${scanId}/report`, token);
+}
+
+export async function chatWithAudit(
+  token: string,
+  scanId: string,
+  data: { message: string; history?: AuditChatMessage[] },
+): Promise<AuditChatResponse> {
+  return apiFetch<AuditChatResponse>(`/api/scans/${scanId}/chat`, token, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getDashboard(token: string): Promise<DashboardData> {
@@ -393,6 +598,18 @@ export async function downloadAuditPdf(token: string, scanId: string): Promise<B
     const error = await response.json().catch(() => ({ detail: "PDF download failed" }));
     const detail = error.detail;
     throw new Error(typeof detail === "string" ? detail : "PDF download failed");
+  }
+  return response.blob();
+}
+
+export async function downloadSbom(token: string, scanId: string): Promise<Blob> {
+  const response = await fetch(`${API_URL}/api/scans/${scanId}/sbom`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "SBOM download failed" }));
+    const detail = error.detail;
+    throw new Error(typeof detail === "string" ? detail : "SBOM download failed");
   }
   return response.blob();
 }

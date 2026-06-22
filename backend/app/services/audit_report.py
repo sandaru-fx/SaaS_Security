@@ -6,8 +6,10 @@ from app.models.scan import Scan
 from app.schemas.scan import (
     AuditReportResponse,
     CategoryScoreResponse,
+    ComplianceControlResponse,
     IssueResponse,
 )
+from app.services.compliance_service import build_compliance_summary
 from app.services.ai_auditor import parse_recommendations
 from app.services.report_service import (
     apply_scores_to_scan,
@@ -23,6 +25,7 @@ from app.services.report_service import (
 
 
 def issue_to_response(issue: Issue) -> IssueResponse:
+    extra = issue.extra_data or {}
     return IssueResponse(
         id=issue.id,
         scan_id=issue.scan_id,
@@ -43,6 +46,11 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         report_category=map_issue_category(issue.category),
         dismissed=bool(issue.dismissed),
         dismissed_reason=issue.dismissed_reason,
+        cwe_id=extra.get("cwe_id"),
+        owasp_category=extra.get("owasp_category"),
+        ai_triage_verdict=extra.get("ai_triage_verdict"),
+        ai_triage_reason=extra.get("ai_triage_reason"),
+        ai_fix_suggestion=extra.get("ai_fix_suggestion"),
         created_at=issue.created_at,
     )
 
@@ -64,6 +72,11 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         user = await db.get(User, scan.user_id)
         allow_deep = has_feature(user, "deep_audit") if user else False
         enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
+        from app.services.ai_triage import run_ai_triage
+        from app.models.project import Project
+
+        project = await db.get(Project, scan.project_id)
+        run_ai_triage(scan, issues, project=project, allow_deep_audit=allow_deep)
         needs_commit = True
 
     if needs_commit:
@@ -81,6 +94,7 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
     top_issues = sort_issues_by_priority(issues)[:10]
     fix_targets = [i for i in issues if i.severity in ("critical", "high")][:5]
     estimated = _estimate_score_after_fixes(issues, fix_targets)
+    compliance = build_compliance_summary(issues)
 
     return AuditReportResponse(
         scan_id=scan.id,
@@ -111,6 +125,17 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         ai_business_risk=scan.ai_business_risk,
         ai_recommendations=parse_recommendations(scan.ai_recommendations),
         ai_provider=scan.ai_provider,
+        compliance=[
+            ComplianceControlResponse(
+                framework=c.framework,
+                control_id=c.control_id,
+                title=c.title,
+                issue_count=c.issue_count,
+                max_severity=c.max_severity,
+                status=c.status,
+            )
+            for c in compliance
+        ],
     )
 
 

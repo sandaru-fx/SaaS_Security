@@ -55,6 +55,13 @@ class ActiveScanItem(BaseModel):
     created_at: datetime
 
 
+class RemediationItemResponse(BaseModel):
+    title: str
+    severity: str
+    rule_id: str
+    file_path: str | None = None
+
+
 class DashboardResponse(BaseModel):
     stats: DashboardStats
     recent_scans: list[RecentScanItem]
@@ -75,3 +82,8 @@ class ScanCompareResponse(BaseModel):
     low_delta: int
     category_deltas: dict[str, int | None]
     improved: bool
+    fixed_count: int = 0
+    new_count: int = 0
+    recurring_count: int = 0
+    fixed_issues: list[RemediationItemResponse] = Field(default_factory=list)
+    new_issues: list[RemediationItemResponse] = Field(default_factory=list)

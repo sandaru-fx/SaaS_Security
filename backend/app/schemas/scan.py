@@ -2,6 +2,8 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -69,6 +71,11 @@ class IssueResponse(BaseModel):
     report_category: str | None = None
     dismissed: bool = False
     dismissed_reason: str | None = None
+    cwe_id: str | None = None
+    owasp_category: str | None = None
+    ai_triage_verdict: str | None = None
+    ai_triage_reason: str | None = None
+    ai_fix_suggestion: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -83,6 +90,15 @@ class CategoryScoreResponse(BaseModel):
     category: str
     score: int
     issue_count: int
+
+
+class ComplianceControlResponse(BaseModel):
+    framework: str
+    control_id: str
+    title: str
+    issue_count: int
+    max_severity: str
+    status: str
 
 
 class AuditReportResponse(BaseModel):
@@ -105,3 +121,19 @@ class AuditReportResponse(BaseModel):
     ai_business_risk: str | None = None
     ai_recommendations: list[str] = Field(default_factory=list)
     ai_provider: str | None = None
+    compliance: list[ComplianceControlResponse] = Field(default_factory=list)
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class AuditChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    history: list[ChatMessage] = Field(default_factory=list, max_length=12)
+
+
+class AuditChatResponse(BaseModel):
+    reply: str
+    provider: str

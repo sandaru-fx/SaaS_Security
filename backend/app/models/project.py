@@ -31,6 +31,13 @@ class Project(Base):
     file_count: Mapped[int] = mapped_column(Integer, default=0)
     webhook_url: Mapped[str] = mapped_column(String(500), nullable=True)
     webhook_secret: Mapped[str] = mapped_column(String(255), nullable=True)
+    domain_verification_token: Mapped[str] = mapped_column(String(64), nullable=True)
+    domain_verified: Mapped[bool] = mapped_column(default=False)
+    domain_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    pr_checks_enabled: Mapped[bool] = mapped_column(default=False)
+    active_dast_enabled: Mapped[bool] = mapped_column(default=False)
+    api_spec_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    auth_config: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -43,3 +50,7 @@ class Project(Base):
 
     user = relationship("User", back_populates="projects")
     scans = relationship("Scan", back_populates="project", cascade="all, delete-orphan")
+
+    @property
+    def has_auth_configured(self) -> bool:
+        return bool(self.auth_config and self.auth_config.strip() not in ("", "{}"))

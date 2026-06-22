@@ -10,14 +10,31 @@ import { ScanComparePanel } from "@/components/ScanComparePanel";
 import {
   ApiProject,
   ApiScan,
+  AuthConfig,
+  AuthType,
+  DomainVerificationInfo,
   ScanCompareResult,
+  SourceType,
   compareScans,
   deleteProject,
+  getDomainVerification,
   getProject,
   listScans,
   startScan,
   updateProject,
+  updateProjectAuth,
+  updateProjectPrChecks,
+  verifyDomain,
 } from "@/lib/api";
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  github: "GitHub",
+  zip: "ZIP Upload",
+  folder: "Local Folder",
+  local: "Local Path",
+  website: "Live Website",
+  api: "REST API (OpenAPI)",
+};
 
 const statusColors: Record<ApiProject["status"], string> = {
   pending: "text-zinc-400",
@@ -53,8 +70,14 @@ export default function ProjectDetailPage() {
   const [targetScanId, setTargetScanId] = useState("");
   const [comparison, setComparison] = useState<ScanCompareResult | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [domainInfo, setDomainInfo] = useState<DomainVerificationInfo | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [prChecksLoading, setPrChecksLoading] = useState(false);
 
   const completedScans = scans.filter((s) => s.status === "completed");
+  const liveTarget =
+    project?.source_type === "website" || project?.source_type === "api";
+  const websiteNeedsVerification = liveTarget && project && !project.domain_verified;
 
   useEffect(() => {
     async function load() {
@@ -69,6 +92,18 @@ export default function ProjectDetailPage() {
         setScans(scanData.scans);
         setEditName(projectData.name);
         setEditDescription(projectData.description ?? "");
+
+        if (
+          projectData.source_type === "website" ||
+          projectData.source_type === "api"
+        ) {
+          try {
+            const info = await getDomainVerification(token, projectId);
+            setDomainInfo(info);
+          } catch {
+            setDomainInfo(null);
+          }
+        }
 
         const completed = scanData.scans.filter((s) => s.status === "completed");
         if (completed.length >= 2) {
@@ -194,25 +229,164 @@ export default function ProjectDetailPage() {
             </div>
 
             <div className="mt-8 space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-              <DetailRow label="Source" value={project.source_type === "github" ? "GitHub" : "ZIP Upload"} />
-              {project.repo_url && <DetailRow label="Repository" value={project.repo_url} mono />}
+              <DetailRow
+                label="Source"
+                value={SOURCE_LABELS[project.source_type] ?? project.source_type}
+              />
+              {project.repo_url && (
+                <DetailRow
+                  label={
+                    project.source_type === "website"
+                      ? "Website URL"
+                      : project.source_type === "local"
+                        ? "Local Folder"
+                        : "Repository"
+                  }
+                  value={project.repo_url}
+                  mono
+                />
+              )}
               {project.repo_branch && <DetailRow label="Branch" value={project.repo_branch} />}
-              <DetailRow label="Files" value={String(project.file_count)} />
+              {project.source_type !== "website" && project.source_type !== "api" && (
+                <DetailRow label="Files" value={String(project.file_count)} />
+              )}
+              {project.source_type === "website" && (
+                <DetailRow
+                  label="Active DAST"
+                  value={project.active_dast_enabled ? "Enabled" : "Disabled"}
+                />
+              )}
+              {liveTarget && (
+                <DetailRow
+                  label="Authentication"
+                  value={project.has_auth_configured ? "Configured" : "None (public scan)"}
+                />
+              )}
               <DetailRow label="Created" value={new Date(project.created_at).toLocaleString()} />
               {project.status_message && (
                 <DetailRow label="Status Message" value={project.status_message} />
               )}
             </div>
 
+            {liveTarget && domainInfo && (
+              <section className="mt-8 rounded-xl border border-amber-500/20 bg-amber-950/10 p-6">
+                <h2 className="text-sm font-medium uppercase tracking-widest text-amber-300">
+                  Domain Ownership Verification
+                </h2>
+                {domainInfo.verified ? (
+                  <p className="mt-3 text-sm text-emerald-300">
+                    Domain verified — you can run website security scans.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm text-zinc-300">
+                      Verify you own <strong>{domainInfo.domain}</strong> before scanning.
+                      Choose one method:
+                    </p>
+                    <div className="mt-4 space-y-3 text-sm">
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+                        <p className="text-zinc-400">DNS TXT record</p>
+                        <p className="mt-1 font-mono text-xs text-zinc-200">
+                          {domainInfo.dns_record_name} → {domainInfo.dns_record_value}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+                        <p className="text-zinc-400">HTML meta tag (homepage)</p>
+                        <code className="mt-1 block break-all text-xs text-zinc-200">
+                          {domainInfo.meta_tag}
+                        </code>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setVerifying(true);
+                        setError(null);
+                        try {
+                          const token = await getToken();
+                          if (!token) return;
+                          const info = await verifyDomain(token, projectId);
+                          setDomainInfo(info);
+                          const updated = await getProject(token, projectId);
+                          setProject(updated);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Verification failed");
+                        } finally {
+                          setVerifying(false);
+                        }
+                      }}
+                      disabled={verifying}
+                      className="mt-4 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+                    >
+                      {verifying ? "Checking..." : "Verify Domain"}
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
+
+            {liveTarget && (
+              <ActiveDastPanel
+                project={project}
+                getToken={getToken}
+                onUpdate={setProject}
+                onError={setError}
+              />
+            )}
+
+            {project.source_type === "github" && (
+              <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+                <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-500">
+                  GitHub PR Checks
+                </h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Enable to scan pull requests and post findings as PR comments. Requires GitHub
+                  PAT in Enterprise settings and webhook at{" "}
+                  <code className="text-emerald-400">POST /api/integrations/github/webhook</code>.
+                </p>
+                <label className="mt-4 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={project.pr_checks_enabled ?? false}
+                    onChange={async (e) => {
+                      setPrChecksLoading(true);
+                      try {
+                        const token = await getToken();
+                        if (!token) return;
+                        const updated = await updateProjectPrChecks(
+                          token,
+                          projectId,
+                          e.target.checked,
+                        );
+                        setProject(updated);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Failed to update PR checks");
+                      } finally {
+                        setPrChecksLoading(false);
+                      }
+                    }}
+                    disabled={prChecksLoading}
+                    className="h-4 w-4 rounded border-zinc-600"
+                  />
+                  <span className="text-sm text-zinc-300">Enable PR security checks</span>
+                </label>
+              </section>
+            )}
+
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={handleStartAudit}
-                disabled={project.status !== "ready" || scanning}
+                disabled={project.status !== "ready" || scanning || websiteNeedsVerification}
                 className="rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {scanning ? "Starting Audit..." : "Re-scan Project"}
               </button>
+              {websiteNeedsVerification && (
+                <p className="self-center text-sm text-amber-300">
+                  Verify domain ownership before scanning.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => setEditing((v) => !v)}
@@ -370,5 +544,178 @@ function DetailRow({
         {value}
       </span>
     </div>
+  );
+}
+
+function ActiveDastPanel({
+  project,
+  getToken,
+  onUpdate,
+  onError,
+}: {
+  project: ApiProject;
+  getToken: () => Promise<string | null>;
+  onUpdate: (p: ApiProject) => void;
+  onError: (msg: string) => void;
+}) {
+  const [authType, setAuthType] = useState<AuthType>("none");
+  const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [cookies, setCookies] = useState("");
+  const [headerName, setHeaderName] = useState("");
+  const [headerValue, setHeaderValue] = useState("");
+  const [activeDast, setActiveDast] = useState(project.active_dast_enabled ?? false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  function buildAuth(): AuthConfig {
+    const cfg: AuthConfig = { type: authType };
+    if (authType === "bearer") cfg.token = token;
+    if (authType === "basic") {
+      cfg.username = username;
+      cfg.password = password;
+    }
+    if (authType === "cookie") cfg.cookies = cookies;
+    if (authType === "header") {
+      cfg.header_name = headerName;
+      cfg.header_value = headerValue;
+    }
+    return cfg;
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const jwt = await getToken();
+      if (!jwt) return;
+      const updated = await updateProjectAuth(jwt, project.id, {
+        auth: buildAuth(),
+        active_dast_enabled: project.source_type === "website" ? activeDast : null,
+      });
+      onUpdate(updated);
+      setSavedAt(new Date());
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-xl border border-rose-500/20 bg-rose-950/10 p-6">
+      <h2 className="text-sm font-medium uppercase tracking-widest text-rose-300">
+        Active DAST & Authentication
+      </h2>
+      <p className="mt-2 text-sm text-zinc-400">
+        {project.source_type === "website"
+          ? "Toggle live attack-style probes (XSS / SQLi / open-redirect / path-traversal / verbose errors / CORS) and optionally provide credentials so probes run as a logged-in user."
+          : "Provide credentials so OWASP API Top 10 tests can reach authenticated endpoints (BOLA, function-level auth, mass assignment, rate limiting)."}
+      </p>
+
+      {project.source_type === "website" && (
+        <label className="mt-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={activeDast}
+            onChange={(e) => setActiveDast(e.target.checked)}
+            className="h-4 w-4 rounded border-zinc-600"
+          />
+          <span className="text-sm text-zinc-300">
+            Enable Active DAST probes on next scan
+          </span>
+        </label>
+      )}
+
+      <div className="mt-4 space-y-3">
+        <select
+          value={authType}
+          onChange={(e) => setAuthType(e.target.value as AuthType)}
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+        >
+          <option value="none">No authentication</option>
+          <option value="bearer">Bearer token</option>
+          <option value="basic">HTTP Basic auth</option>
+          <option value="cookie">Cookie header</option>
+          <option value="header">Custom header (e.g. X-API-Key)</option>
+        </select>
+
+        {authType === "bearer" && (
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Bearer token"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+          />
+        )}
+        {authType === "basic" && (
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+          </div>
+        )}
+        {authType === "cookie" && (
+          <input
+            type="text"
+            value={cookies}
+            onChange={(e) => setCookies(e.target.value)}
+            placeholder="session=abc; csrf=xyz"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+          />
+        )}
+        {authType === "header" && (
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={headerName}
+              onChange={(e) => setHeaderName(e.target.value)}
+              placeholder="X-API-Key"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+            <input
+              type="password"
+              value={headerValue}
+              onChange={(e) => setHeaderValue(e.target.value)}
+              placeholder="Header value"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg bg-rose-500 px-5 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        {savedAt && (
+          <span className="text-xs text-emerald-300">
+            Saved at {savedAt.toLocaleTimeString()}
+          </span>
+        )}
+        {project.has_auth_configured && authType === "none" && !saving && (
+          <span className="text-xs text-amber-300">
+            Auth currently configured. Select &quot;No authentication&quot; and save to clear it.
+          </span>
+        )}
+      </div>
+    </section>
   );
 }

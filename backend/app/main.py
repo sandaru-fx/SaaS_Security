@@ -9,7 +9,7 @@ if sys.platform == "win32":
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import billing, dashboard, enterprise, health, projects, scans, users, v1
+from app.api.routes import billing, dashboard, enterprise, health, integrations, projects, scans, users, v1
 from app.config import get_settings
 from app.database import Base, engine
 from app.db_migrate import run_additive_migrations
@@ -84,6 +84,7 @@ app.include_router(billing.router, prefix="/api")
 app.include_router(enterprise.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
+app.include_router(integrations.router, prefix="/api")
 app.include_router(scans.router, prefix="/api")
 app.include_router(v1.router, prefix="/api")
 

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.models.issue import Issue
 from app.models.project import Project
 from app.models.scan import Scan
 from app.schemas.dashboard import (
@@ -16,10 +17,12 @@ from app.schemas.dashboard import (
     DashboardResponse,
     DashboardStats,
     RecentScanItem,
+    RemediationItemResponse,
     ScanCompareResponse,
     TrendPoint,
 )
 from app.schemas.scan import ScanResponse
+from app.services.remediation_service import compare_remediation
 from app.services.report_service import AUDIT_CATEGORIES
 
 CATEGORY_FIELDS = {
@@ -233,6 +236,18 @@ async def compare_scans(
 
     improved = score_delta is not None and score_delta > 0
 
+    base_issues = list(
+        (
+            await db.execute(select(Issue).where(Issue.scan_id == base_scan_id))
+        ).scalars().all()
+    )
+    target_issues = list(
+        (
+            await db.execute(select(Issue).where(Issue.scan_id == target_scan_id))
+        ).scalars().all()
+    )
+    remediation = compare_remediation(base_issues, target_issues)
+
     return ScanCompareResponse(
         project_id=project_id,
         base_scan=base_resp,
@@ -245,4 +260,25 @@ async def compare_scans(
         low_delta=target.low_count - base.low_count,
         category_deltas=category_deltas,
         improved=improved,
+        fixed_count=remediation.fixed_count,
+        new_count=remediation.new_count,
+        recurring_count=remediation.recurring_count,
+        fixed_issues=[
+            RemediationItemResponse(
+                title=i.title,
+                severity=i.severity,
+                rule_id=i.rule_id,
+                file_path=i.file_path,
+            )
+            for i in remediation.fixed_issues
+        ],
+        new_issues=[
+            RemediationItemResponse(
+                title=i.title,
+                severity=i.severity,
+                rule_id=i.rule_id,
+                file_path=i.file_path,
+            )
+            for i in remediation.new_issues
+        ],
     )

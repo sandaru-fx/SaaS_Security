@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 class PlanFeatures(BaseModel):
     pdf_export: bool
+    sbom_export: bool = False
     deep_audit: bool
     private_repos: bool
     unlimited_scans: bool
