@@ -32,6 +32,13 @@ SaaS_2/
 - [x] User table sync (`GET /api/users/me`)
 - [x] Profile page with update (`PATCH /api/users/me`)
 
+### Phase 3 — Projects & Repo
+- [x] Project CRUD (create, list, view, update, delete)
+- [x] GitHub public repo connect (clone via API)
+- [x] ZIP file upload with safe extraction
+- [x] Project dashboard UI
+- [x] Local file storage with auto cleanup on delete
+
 ## Prerequisites
 
 - **Node.js** 18+
@@ -118,6 +125,12 @@ SaaS_2/
 | `GET /api/health/ready` | No | Readiness (DB + Redis) |
 | `GET /api/users/me` | Yes | Get/sync current user |
 | `PATCH /api/users/me` | Yes | Update profile |
+| `GET /api/projects` | Yes | List user projects |
+| `POST /api/projects/github` | Yes | Create from GitHub URL |
+| `POST /api/projects/upload` | Yes | Create from ZIP upload |
+| `GET /api/projects/{id}` | Yes | Get project details |
+| `PATCH /api/projects/{id}` | Yes | Update project |
+| `DELETE /api/projects/{id}` | Yes | Delete project + files |
 | `GET /docs` | No | Swagger UI |
 
 ## Frontend Routes
@@ -129,6 +142,9 @@ SaaS_2/
 | `/sign-up` | Public | Clerk sign up |
 | `/dashboard` | Protected | User dashboard |
 | `/profile` | Protected | Profile settings |
+| `/projects` | Protected | Project list |
+| `/projects/new` | Protected | Create project |
+| `/projects/[id]` | Protected | Project details |
 
 ## Development Phases
 
@@ -136,7 +152,7 @@ SaaS_2/
 |---|---|---|
 | 01 | Foundation | ✅ Done |
 | 02 | Auth & Users | ✅ Done |
-| 03 | Projects & Repo | Pending |
+| 03 | Projects & Repo | ✅ Done |
 | 04 | Scan Engine | Pending |
 | 05 | Report & Score | Pending |
 | 06 | AI Layer | Pending |

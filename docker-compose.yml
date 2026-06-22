@@ -50,6 +50,8 @@ services:
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_JWKS_URL: ${CLERK_JWKS_URL:-}
       CLERK_JWT_ISSUER: ${CLERK_JWT_ISSUER:-}
+      UPLOAD_DIR: uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +59,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./uploads:/app/uploads
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   worker:

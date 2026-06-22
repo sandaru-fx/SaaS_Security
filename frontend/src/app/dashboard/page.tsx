@@ -5,33 +5,41 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { ApiUser, getCurrentUser } from "@/lib/api";
+import { ProjectCard } from "@/components/ProjectCard";
+import { ApiProject, ApiUser, getCurrentUser, listProjects } from "@/lib/api";
 
 export default function DashboardPage() {
   const { getToken } = useAuth();
   const { user } = useUser();
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [projectTotal, setProjectTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function syncUser() {
+    async function load() {
       try {
         const token = await getToken();
         if (!token) {
           setError("No auth token available");
           return;
         }
-        const data = await getCurrentUser(token);
-        setApiUser(data);
+        const [userData, projectData] = await Promise.all([
+          getCurrentUser(token),
+          listProjects(token),
+        ]);
+        setApiUser(userData);
+        setProjects(projectData.projects.slice(0, 3));
+        setProjectTotal(projectData.total);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to sync user");
+        setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     }
 
-    syncUser();
+    load();
   }, [getToken]);
 
   const displayName =
@@ -40,78 +48,76 @@ export default function DashboardPage() {
     user?.emailAddresses[0]?.emailAddress ||
     "User";
 
+  const readyProjects = projects.filter((p) => p.status === "ready").length;
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 2 — Auth" />
+      <AppHeader badge="Phase 3 — Projects" />
 
       <main className="mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome, {displayName}
-          </h1>
-          <p className="mt-2 text-zinc-400">
-            Your auditor dashboard. Projects and scans coming in Phase 3.
-          </p>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome, {displayName}
+            </h1>
+            <p className="mt-2 text-zinc-400">
+              Manage your projects and prepare them for security audits.
+            </p>
+          </div>
+          <Link
+            href="/projects/new"
+            className="rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            + New Project
+          </Link>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          <StatCard label="Projects" value="0" hint="Phase 3" />
-          <StatCard label="Scans" value="0" hint="Phase 4" />
+          <StatCard label="Projects" value={String(projectTotal)} hint="Total projects" />
+          <StatCard label="Ready" value={String(readyProjects)} hint="Ready to audit" />
           <StatCard label="Health Score" value="—" hint="Phase 5" />
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-            <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-500">
-              Account Status
-            </h2>
-            {loading && <p className="mt-4 text-zinc-400">Syncing with API...</p>}
-            {error && (
-              <p className="mt-4 rounded-lg border border-red-900 bg-red-950/50 p-4 text-sm text-red-300">
-                {error}
-              </p>
-            )}
-            {apiUser && (
-              <dl className="mt-4 space-y-3 text-sm">
-                <Row label="Email" value={apiUser.email} />
-                <Row label="Clerk ID" value={apiUser.clerk_id} mono />
-                <Row label="DB User ID" value={apiUser.id} mono />
-                <Row
-                  label="Synced"
-                  value={new Date(apiUser.created_at).toLocaleString()}
-                />
-              </dl>
-            )}
-          </section>
+        {loading && <p className="mt-8 text-zinc-400">Loading dashboard...</p>}
+        {error && (
+          <p className="mt-8 rounded-lg border border-red-900 bg-red-950/50 p-4 text-sm text-red-300">
+            {error}
+          </p>
+        )}
 
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-            <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-500">
-              Quick Actions
-            </h2>
-            <div className="mt-4 flex flex-col gap-3">
-              <Link
-                href="/profile"
-                className="rounded-lg border border-zinc-700 px-4 py-3 text-sm text-zinc-300 transition hover:border-emerald-500 hover:text-white"
-              >
-                Edit Profile →
+        {!loading && !error && (
+          <section className="mt-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-500">
+                Recent Projects
+              </h2>
+              <Link href="/projects" className="text-sm text-emerald-400 hover:text-emerald-300">
+                View all →
               </Link>
-              <button
-                type="button"
-                disabled
-                className="cursor-not-allowed rounded-lg border border-zinc-800 px-4 py-3 text-left text-sm text-zinc-600"
-              >
-                Create Project — Phase 3
-              </button>
-              <button
-                type="button"
-                disabled
-                className="cursor-not-allowed rounded-lg border border-zinc-800 px-4 py-3 text-left text-sm text-zinc-600"
-              >
-                Start Audit — Phase 4
-              </button>
             </div>
+
+            {projects.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 p-10 text-center">
+                <p className="text-zinc-300">No projects yet</p>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Connect a GitHub repo or upload a ZIP to get started.
+                </p>
+                <Link
+                  href="/projects/new"
+                  className="mt-4 inline-block rounded-lg bg-emerald-500 px-5 py-2 text-sm font-semibold text-zinc-950"
+                >
+                  Create First Project
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
           </section>
-        </div>
+        )}
       </main>
     </div>
   );
@@ -131,25 +137,6 @@ function StatCard({
       <p className="text-sm text-zinc-500">{label}</p>
       <p className="mt-2 text-4xl font-bold">{value}</p>
       <p className="mt-1 text-xs text-zinc-600">{hint}</p>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-zinc-800 pb-3">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className={`text-right text-zinc-200 ${mono ? "font-mono text-xs" : ""}`}>
-        {value}
-      </dd>
     </div>
   );
 }

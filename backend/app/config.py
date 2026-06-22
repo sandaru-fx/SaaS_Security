@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     clerk_jwks_url: str = ""
     clerk_jwt_issuer: str = ""
 
+    upload_dir: str = "uploads"
+    max_upload_size_mb: int = 50
+    max_zip_files: int = 5000
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

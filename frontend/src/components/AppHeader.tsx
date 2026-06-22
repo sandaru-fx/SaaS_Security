@@ -48,6 +48,12 @@ export function AppHeader({ badge }: { badge?: string }) {
 
           <SignedIn>
             <Link
+              href="/projects"
+              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+            >
+              Projects
+            </Link>
+            <Link
               href="/dashboard"
               className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
             >

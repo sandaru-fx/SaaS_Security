@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -30,3 +30,5 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
