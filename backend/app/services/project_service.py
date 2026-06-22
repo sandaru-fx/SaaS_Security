@@ -11,7 +11,9 @@ from app.models.project import Project
 from app.models.user import User
 from app.schemas.project import ProjectCreateGithub, ProjectCreateWebsite, ProjectUpdate
 from app.scanners.website_scanner import normalize_website_url, validate_website_url
-from app.services.github import build_github_zipball_url, parse_github_url
+from app.services.github import build_github_headers, build_github_zipball_url, parse_github_url
+from app.services.domain_verification import generate_verification_token
+from app.services.subscription_service import has_feature
 from app.services.storage import (
     count_project_files,
     delete_project_dir,
@@ -66,7 +68,8 @@ async def create_github_project(
     project.storage_path = f"{settings.upload_dir}/{user.id}/{project.id}"
 
     try:
-        await _download_github_repo(owner, repo, payload.branch.strip(), project_dir)
+        token = user.github_pat if has_feature(user, "private_repos") else None
+        await _download_github_repo(owner, repo, payload.branch.strip(), project_dir, token=token)
         flatten_single_root_folder(project_dir)
         project.file_count = count_project_files(project_dir)
         project.status = "ready"
@@ -152,6 +155,8 @@ async def create_website_project(
         description=payload.description,
         source_type="website",
         repo_url=normalized_url,
+        domain_verification_token=generate_verification_token(),
+        domain_verified=False,
         status="processing",
     )
     db.add(project)
@@ -170,7 +175,10 @@ async def create_website_project(
             if response.status_code >= 400:
                 raise ValueError(f"Website returned HTTP {response.status_code}")
         project.status = "ready"
-        project.status_message = f"Website reachable at {normalized_url}"
+        project.status_message = (
+            f"Website reachable at {normalized_url}. "
+            "Verify domain ownership before scanning."
+        )
     except httpx.HTTPError as exc:
         project.status = "failed"
         project.status_message = f"Could not reach website: {exc}"
@@ -201,20 +209,32 @@ async def delete_project(db: AsyncSession, user: User, project: Project) -> None
     await db.commit()
 
 
-async def _download_github_repo(owner: str, repo: str, branch: str, dest_dir: Path) -> None:
+async def _download_github_repo(
+    owner: str,
+    repo: str,
+    branch: str,
+    dest_dir: Path,
+    *,
+    token: str | None = None,
+) -> None:
     url = build_github_zipball_url(owner, repo, branch)
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "AI-Software-Auditor/1.0",
-    }
+    headers = build_github_headers(token)
 
     async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
         response = await client.get(url, headers=headers)
         if response.status_code == 404:
+            if token:
+                raise ValueError(
+                    f"Repository not found or branch '{branch}' does not exist. "
+                    "Check your GitHub token has repo access."
+                )
             raise ValueError(
                 f"Repository not found or branch '{branch}' does not exist. "
-                "Only public repositories are supported."
+                "Public repos work on Free. Private repos require Pro and a GitHub PAT "
+                "(set in Enterprise settings)."
             )
+        if response.status_code == 401:
+            raise ValueError("GitHub authentication failed. Check your Personal Access Token.")
         if response.status_code != 200:
             raise ValueError(f"GitHub download failed (HTTP {response.status_code})")
 

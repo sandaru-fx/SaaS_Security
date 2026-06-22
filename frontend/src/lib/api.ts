@@ -24,6 +24,9 @@ export type ApiProject = {
   status: ProjectStatus;
   status_message: string | null;
   file_count: number;
+  domain_verified?: boolean;
+  domain_verification_token?: string | null;
+  pr_checks_enabled?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -120,6 +123,16 @@ export type AuditReport = {
   ai_business_risk: string | null;
   ai_recommendations: string[];
   ai_provider: string | null;
+  compliance: ComplianceControl[];
+};
+
+export type ComplianceControl = {
+  framework: string;
+  control_id: string;
+  title: string;
+  issue_count: number;
+  max_severity: string;
+  status: string;
 };
 
 export type ScanListResponse = { scans: ApiScan[]; total: number };
@@ -343,6 +356,54 @@ export async function updateProject(
 
 export async function deleteProject(token: string, projectId: string): Promise<void> {
   await apiFetch<void>(`/api/projects/${projectId}`, token, { method: "DELETE" });
+}
+
+export type DomainVerificationInfo = {
+  domain: string;
+  token: string;
+  dns_record_name: string;
+  dns_record_value: string;
+  meta_tag: string;
+  verified: boolean;
+};
+
+export async function getDomainVerification(
+  token: string,
+  projectId: string,
+): Promise<DomainVerificationInfo> {
+  return apiFetch<DomainVerificationInfo>(`/api/projects/${projectId}/domain-verification`, token);
+}
+
+export async function verifyDomain(
+  token: string,
+  projectId: string,
+): Promise<DomainVerificationInfo> {
+  return apiFetch<DomainVerificationInfo>(`/api/projects/${projectId}/verify-domain`, token, {
+    method: "POST",
+  });
+}
+
+export async function updateProjectPrChecks(
+  token: string,
+  projectId: string,
+  enabled: boolean,
+): Promise<ApiProject> {
+  return apiFetch<ApiProject>(`/api/projects/${projectId}/pr-checks`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function updateGithubPat(
+  token: string,
+  github_pat: string | null,
+): Promise<{ github_pat_configured: boolean }> {
+  const user = await apiFetch<ApiUser & { github_pat_configured: boolean }>(
+    "/api/users/me/github-pat",
+    token,
+    { method: "PATCH", body: JSON.stringify({ github_pat }) },
+  );
+  return { github_pat_configured: user.github_pat_configured };
 }
 
 export async function startScan(token: string, projectId: string): Promise<ApiScan> {

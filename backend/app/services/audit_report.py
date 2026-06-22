@@ -6,8 +6,10 @@ from app.models.scan import Scan
 from app.schemas.scan import (
     AuditReportResponse,
     CategoryScoreResponse,
+    ComplianceControlResponse,
     IssueResponse,
 )
+from app.services.compliance_service import build_compliance_summary
 from app.services.ai_auditor import parse_recommendations
 from app.services.report_service import (
     apply_scores_to_scan,
@@ -92,6 +94,7 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
     top_issues = sort_issues_by_priority(issues)[:10]
     fix_targets = [i for i in issues if i.severity in ("critical", "high")][:5]
     estimated = _estimate_score_after_fixes(issues, fix_targets)
+    compliance = build_compliance_summary(issues)
 
     return AuditReportResponse(
         scan_id=scan.id,
@@ -122,6 +125,17 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         ai_business_risk=scan.ai_business_risk,
         ai_recommendations=parse_recommendations(scan.ai_recommendations),
         ai_provider=scan.ai_provider,
+        compliance=[
+            ComplianceControlResponse(
+                framework=c.framework,
+                control_id=c.control_id,
+                title=c.title,
+                issue_count=c.issue_count,
+                max_severity=c.max_severity,
+                status=c.status,
+            )
+            for c in compliance
+        ],
     )
 
 

@@ -49,10 +49,26 @@ class ProjectResponse(BaseModel):
     status: ProjectStatus
     status_message: str | None
     file_count: int
+    domain_verified: bool = False
+    domain_verification_token: str | None = None
+    pr_checks_enabled: bool = False
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DomainVerificationInfo(BaseModel):
+    domain: str
+    token: str
+    dns_record_name: str
+    dns_record_value: str
+    meta_tag: str
+    verified: bool
+
+
+class ProjectPrChecksUpdate(BaseModel):
+    enabled: bool
 
 
 class ProjectListResponse(BaseModel):

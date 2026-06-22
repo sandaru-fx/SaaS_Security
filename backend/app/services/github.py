@@ -21,3 +21,13 @@ def parse_github_url(url: str) -> tuple[str, str]:
 
 def build_github_zipball_url(owner: str, repo: str, branch: str) -> str:
     return f"https://api.github.com/repos/{owner}/{repo}/zipball/{branch}"
+
+
+def build_github_headers(token: str | None = None) -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "AI-Software-Auditor/1.0",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers

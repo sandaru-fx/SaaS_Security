@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     smtp_from_email: str = ""
     smtp_use_tls: bool = True
 
+    github_webhook_secret: str = ""
+
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 50
     max_zip_files: int = 5000

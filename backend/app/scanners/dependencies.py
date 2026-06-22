@@ -20,6 +20,8 @@ LOCKFILE_NAMES = {
     "pyproject.toml": "PyPI",
     "go.mod": "Go",
     "Cargo.lock": "crates.io",
+    "composer.lock": "Packagist",
+    "Gemfile.lock": "RubyGems",
 }
 
 
@@ -110,6 +112,16 @@ def _collect_packages(project_dir: Path) -> list[tuple[str, str, str]]:
         if any(part in SKIP_DIRS for part in cargo_lock.parts):
             continue
         packages.extend(_parse_cargo_lock(cargo_lock))
+
+    for composer_lock in project_dir.rglob("composer.lock"):
+        if any(part in SKIP_DIRS for part in composer_lock.parts):
+            continue
+        packages.extend(_parse_composer_lock(composer_lock))
+
+    for gemfile_lock in project_dir.rglob("Gemfile.lock"):
+        if any(part in SKIP_DIRS for part in gemfile_lock.parts):
+            continue
+        packages.extend(_parse_gemfile_lock(gemfile_lock))
 
     seen: set[tuple[str, str, str]] = set()
     unique: list[tuple[str, str, str]] = []
@@ -268,6 +280,33 @@ def _parse_cargo_lock(path: Path) -> list[tuple[str, str, str]]:
             version = stripped.split("=", 1)[1].strip().strip('"')
     if name and version:
         packages.append((name, version, "crates.io"))
+    return packages
+
+
+def _parse_composer_lock(path: Path) -> list[tuple[str, str, str]]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    packages: list[tuple[str, str, str]] = []
+    for pkg in data.get("packages", []):
+        name = pkg.get("name")
+        version = pkg.get("version", "").lstrip("v")
+        if name and version:
+            packages.append((name, version, "Packagist"))
+    return packages
+
+
+def _parse_gemfile_lock(path: Path) -> list[tuple[str, str, str]]:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    packages: list[tuple[str, str, str]] = []
+    for match in re.finditer(r"^\s{4}([^\s(]+) \(([^)]+)\)", content, re.MULTILINE):
+        name, version = match.group(1), match.group(2)
+        if name and version:
+            packages.append((name, version, "RubyGems"))
     return packages
 
 

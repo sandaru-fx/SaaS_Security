@@ -20,6 +20,7 @@ import {
   listProjects,
   listSchedules,
   updateNotificationSettings,
+  updateGithubPat,
 } from "@/lib/api";
 
 export default function EnterprisePage() {
@@ -34,6 +35,9 @@ export default function EnterprisePage() {
   const [ruleName, setRuleName] = useState("");
   const [rulePattern, setRulePattern] = useState("");
   const [emailAlerts, setEmailAlerts] = useState(true);
+  const [githubPat, setGithubPat] = useState("");
+  const [patConfigured, setPatConfigured] = useState(false);
+  const [patSaving, setPatSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -260,6 +264,68 @@ export default function EnterprisePage() {
             </button>
             <p className="mt-2 text-xs text-zinc-500">
               Configure SMTP in backend `.env` to enable delivery.
+            </p>
+          </Section>
+
+          <Section title="GitHub Personal Access Token">
+            <p className="mb-4 text-sm text-zinc-400">
+              Required for <strong>private repositories</strong> and <strong>PR security checks</strong>.
+              Create a token with <code>repo</code> scope at github.com/settings/tokens.
+            </p>
+            {patConfigured && (
+              <p className="mb-3 text-sm text-emerald-300">GitHub PAT is configured.</p>
+            )}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setPatSaving(true);
+                try {
+                  const token = await getToken();
+                  if (!token) return;
+                  const result = await updateGithubPat(token, githubPat || null);
+                  setPatConfigured(result.github_pat_configured);
+                  setGithubPat("");
+                  setError(null);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Failed to save GitHub PAT");
+                } finally {
+                  setPatSaving(false);
+                }
+              }}
+              className="flex flex-wrap gap-2"
+            >
+              <input
+                type="password"
+                placeholder="ghp_..."
+                value={githubPat}
+                onChange={(e) => setGithubPat(e.target.value)}
+                className="min-w-[240px] flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-mono"
+              />
+              <button
+                type="submit"
+                disabled={patSaving}
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+              >
+                {patSaving ? "Saving..." : "Save PAT"}
+              </button>
+            </form>
+          </Section>
+
+          <Section title="GitHub PR Webhook">
+            <p className="text-sm text-zinc-400">
+              In your GitHub repo → Settings → Webhooks, add:
+            </p>
+            <ul className="mt-2 list-inside list-disc text-sm text-zinc-300">
+              <li>
+                Payload URL:{" "}
+                <code className="text-emerald-400">https://your-api/api/integrations/github/webhook</code>
+              </li>
+              <li>Content type: application/json</li>
+              <li>Events: Pull requests</li>
+              <li>Secret: set <code>GITHUB_WEBHOOK_SECRET</code> in backend `.env`</li>
+            </ul>
+            <p className="mt-2 text-xs text-zinc-500">
+              Enable PR checks on each GitHub project from the project settings page.
             </p>
           </Section>
 
