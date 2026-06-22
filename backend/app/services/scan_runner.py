@@ -79,6 +79,9 @@ def execute_scan(scan_id: str) -> None:
                     except Exception as exc:
                         logger.debug("Active DAST on ASM host %s failed: %s", host_url, exc)
 
+            if project.domain_verified:
+                raw_findings.extend(_run_graphql_ws_live(project.repo_url, auth, scanners_used))
+
             findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
 
         elif project.source_type == "api":
@@ -106,6 +109,9 @@ def execute_scan(scan_id: str) -> None:
                     scanners_used.append("asm")
                 except Exception as exc:
                     logger.warning("ASM scan failed for API %s: %s", spec_url, exc)
+
+            if project.domain_verified:
+                raw_findings.extend(_run_graphql_ws_live(spec_url, auth, scanners_used))
 
             findings = [enrich_finding_tags(f) for f in deduplicate_findings(raw_findings)]
 
@@ -224,6 +230,34 @@ def _fail_scan(session, scan: Scan, message: str) -> None:
     scan.error_message = message
     scan.completed_at = datetime.now(timezone.utc)
     session.commit()
+
+
+def _run_graphql_ws_live(
+    target_url: str,
+    auth: dict | None,
+    scanners_used: list[str],
+) -> list[ScanFinding]:
+    from app.scanners.graphql_scanner import scan_graphql
+    from app.scanners.websocket_scanner import scan_websocket
+
+    extra: list[ScanFinding] = []
+    try:
+        gql = scan_graphql(target_url, auth=auth)
+        if gql:
+            extra.extend(gql)
+            if "graphql-security" not in scanners_used:
+                scanners_used.append("graphql-security")
+    except Exception as exc:
+        logger.warning("GraphQL scan failed for %s: %s", target_url, exc)
+    try:
+        ws = scan_websocket(target_url, auth=auth)
+        if ws:
+            extra.extend(ws)
+            if "websocket-security" not in scanners_used:
+                scanners_used.append("websocket-security")
+    except Exception as exc:
+        logger.warning("WebSocket scan failed for %s: %s", target_url, exc)
+    return extra
 
 
 def _recount_severities(scan: Scan, issues: list[Issue]) -> None:

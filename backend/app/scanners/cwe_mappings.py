@@ -149,6 +149,27 @@ RULE_TAGS: dict[str, tuple[str, str]] = {
     "asm-exposed-api-docs": ("CWE-200", "A05:2021 - Security Misconfiguration"),
     "asm-exposed-graphql-endpoint": ("CWE-200", "A05:2021 - Security Misconfiguration"),
     "asm-exposed-securitytxt-info": ("CWE-200", "A05:2021 - Security Misconfiguration"),
+    # GraphQL security
+    "graphql-introspection-enabled": ("CWE-200", "API8:2023 - Security Misconfiguration"),
+    "graphql-playground-exposed": ("CWE-200", "API8:2023 - Security Misconfiguration"),
+    "graphql-field-suggestion-leak": ("CWE-200", "API8:2023 - Security Misconfiguration"),
+    "graphql-get-enabled": ("CWE-352", "API8:2023 - Security Misconfiguration"),
+    "graphql-batching-enabled": ("CWE-770", "API4:2023 - Unrestricted Resource Consumption"),
+    "graphql-deep-query-accepted": ("CWE-400", "API4:2023 - Unrestricted Resource Consumption"),
+    "graphql-introspection-enabled-config": ("CWE-489", "API8:2023 - Security Misconfiguration"),
+    "graphql-playground-enabled-config": ("CWE-489", "API8:2023 - Security Misconfiguration"),
+    "graphql-graphiql-enabled-config": ("CWE-489", "API8:2023 - Security Misconfiguration"),
+    "graphql-csrf-disabled": ("CWE-352", "API8:2023 - Security Misconfiguration"),
+    "graphql-schema-in-repo": ("CWE-200", "API9:2023 - Improper Inventory Management"),
+    # WebSocket security
+    "ws-origin-not-validated": ("CWE-346", "A05:2021 - Security Misconfiguration"),
+    "ws-unauthenticated-upgrade": ("CWE-306", "API2:2023 - Broken Authentication"),
+    "ws-endpoint-discovered": ("CWE-200", "API9:2023 - Improper Inventory Management"),
+    "ws-message-injection": ("CWE-79", "A03:2021 - Injection"),
+    "ws-cleartext": ("CWE-319", "A02:2021 - Cryptographic Failures"),
+    "ws-cleartext-in-code": ("CWE-319", "A02:2021 - Cryptographic Failures"),
+    "ws-origin-check-disabled": ("CWE-346", "A05:2021 - Security Misconfiguration"),
+    "ws-wildcard-origin": ("CWE-942", "A05:2021 - Security Misconfiguration"),
 }
 
 DEFAULT_DEPENDENCY_OWASP = "A06:2021 - Vulnerable and Outdated Components"

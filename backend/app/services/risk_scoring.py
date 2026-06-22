@@ -246,6 +246,14 @@ def _compute_risk_score(
         score += 15
         factors.append("subdomain_takeover")
 
+    if issue.rule_id in ("graphql-introspection-enabled", "ws-origin-not-validated", "ws-message-injection"):
+        score += 12
+        factors.append("api_realtime_critical")
+
+    if issue.scanner in ("graphql-security", "websocket-security"):
+        score += 6
+        factors.append("graphql_or_ws")
+
     if issue.confidence == "high":
         score += 3
 
@@ -264,6 +272,8 @@ def _is_fix_now(score: int, issue: Issue, kev_listed: bool) -> bool:
     if kev_listed and extra.get("reachable") != "no":
         return True
     if issue.rule_id == "asm-subdomain-takeover":
+        return True
+    if issue.rule_id in ("graphql-introspection-enabled", "ws-origin-not-validated", "ws-message-injection"):
         return True
     if score >= 75:
         return True
