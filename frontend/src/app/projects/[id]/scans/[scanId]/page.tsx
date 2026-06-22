@@ -13,6 +13,7 @@ import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { HealthScoreRing } from "@/components/HealthScoreRing";
 import { IssueCard } from "@/components/IssueCard";
 import { IssueDetailModal } from "@/components/IssueDetailModal";
+import { TopFixNowPanel } from "@/components/TopFixNowPanel";
 import {
   ApiIssue,
   ApiScan,
@@ -299,6 +300,15 @@ export default function ScanResultsPage() {
                   </div>
                 )}
               </section>
+            )}
+
+            {report && scan.status === "completed" && (
+              <TopFixNowPanel
+                issues={report.fix_now_issues}
+                fixNowCount={report.fix_now_count}
+                maxRiskScore={report.max_risk_score}
+                onSelect={setSelectedIssue}
+              />
             )}
 
             {report && scan.status === "completed" && <AIAuditSummary report={report} />}

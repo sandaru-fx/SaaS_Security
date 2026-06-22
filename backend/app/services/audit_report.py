@@ -11,6 +11,7 @@ from app.schemas.scan import (
 )
 from app.services.compliance_service import build_compliance_summary
 from app.services.ai_auditor import parse_recommendations
+from app.services.risk_scoring import apply_risk_scores, get_risk_score
 from app.services.report_service import (
     apply_scores_to_scan,
     calculate_category_scores,
@@ -58,15 +59,50 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         validated_principal=extra.get("validated_principal"),
         validated_method=extra.get("validated_method"),
         secret_preview=extra.get("secret_preview"),
+        risk_score=_int_or_none(extra.get("risk_score")),
+        epss_score=_float_or_none(extra.get("epss_score")),
+        kev_listed=str(extra.get("kev_listed", "")).lower() == "true",
+        risk_factors=extra.get("risk_factors"),
+        fix_now=str(extra.get("fix_now", "")).lower() == "true",
+        severity_adjusted=extra.get("severity_adjusted"),
         created_at=issue.created_at,
     )
+
+
+def _int_or_none(value) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_or_none(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportResponse:
     result = await db.execute(select(Issue).where(Issue.scan_id == scan.id))
     issues = list(result.scalars().all())
 
+    from app.models.project import Project
+
+    project = await db.get(Project, scan.project_id)
+
     needs_commit = False
+    if issues and any((i.extra_data or {}).get("risk_score") is None for i in issues):
+        apply_risk_scores(issues, project)
+        from app.services.scan_runner import _recount_severities
+
+        _recount_severities(scan, issues)
+        needs_commit = True
+
     if scan.health_score is None and issues:
         apply_scores_to_scan(scan, issues)
         needs_commit = True
@@ -80,9 +116,7 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         allow_deep = has_feature(user, "deep_audit") if user else False
         enrich_scan_with_ai(scan, issues, allow_deep_audit=allow_deep)
         from app.services.ai_triage import run_ai_triage
-        from app.models.project import Project
 
-        project = await db.get(Project, scan.project_id)
         run_ai_triage(scan, issues, project=project, allow_deep_audit=allow_deep)
         needs_commit = True
 
@@ -98,8 +132,11 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
     )
     grade = scan.grade or score_to_grade(overall)
 
-    top_issues = sort_issues_by_priority(issues)[:10]
-    fix_targets = [i for i in issues if i.severity in ("critical", "high")][:5]
+    ranked = sort_issues_by_priority(issues)
+    top_issues = ranked[:10]
+    fix_now = [i for i in ranked if str((i.extra_data or {}).get("fix_now", "")).lower() == "true"][:12]
+    fix_targets = fix_now[:5] if fix_now else [i for i in issues if i.severity in ("critical", "high")][:5]
+    max_risk = max((get_risk_score(i) for i in issues), default=None)
     estimated = _estimate_score_after_fixes(issues, fix_targets)
     compliance = build_compliance_summary(issues)
 
@@ -126,6 +163,9 @@ async def build_audit_report(db: AsyncSession, scan: Scan) -> AuditReportRespons
         executive_summary=generate_executive_summary(overall, grade, scan),
         fix_plan=generate_fix_plan(issues),
         top_priority_issues=[issue_to_response(i) for i in top_issues],
+        fix_now_issues=[issue_to_response(i) for i in fix_now],
+        fix_now_count=len(fix_now),
+        max_risk_score=max_risk,
         production_ready=overall >= 80 and scan.critical_count == 0,
         estimated_score_if_top_fixed=estimated,
         ai_summary=scan.ai_summary,

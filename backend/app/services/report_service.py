@@ -103,13 +103,15 @@ def score_to_grade(score: int) -> str:
 
 
 def issue_priority(issue: Issue) -> int:
-    base = PRIORITY_WEIGHT.get(issue.severity, 10)
-    bonus = CONFIDENCE_BONUS.get(issue.confidence, 0)
-    return base + bonus
+    from app.services.risk_scoring import get_risk_score
+
+    return get_risk_score(issue)
 
 
 def sort_issues_by_priority(issues: list[Issue]) -> list[Issue]:
-    return sorted(issues, key=issue_priority, reverse=True)
+    from app.services.risk_scoring import sort_issues_by_risk
+
+    return sort_issues_by_risk(issues)
 
 
 def generate_executive_summary(overall: int, grade: str, scan: Scan) -> str:
@@ -143,8 +145,11 @@ def generate_fix_plan(issues: list[Issue], limit: int = 5) -> list[str]:
     for index, issue in enumerate(sort_issues_by_priority(issues)[:limit], start=1):
         location = issue.file_path or "project"
         line = f":{issue.line_start}" if issue.line_start > 0 else ""
+        extra = issue.extra_data or {}
+        risk = extra.get("risk_score")
+        risk_note = f" · Risk {risk}/100" if risk is not None else ""
         plan.append(
-            f"{index}. [{issue.severity.upper()}] {issue.title} — "
+            f"{index}. [{issue.severity.upper()}]{risk_note} {issue.title} — "
             f"Fix in `{location}{line}`: {issue.fix_recommendation}"
         )
     return plan
