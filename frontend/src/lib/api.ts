@@ -40,6 +40,7 @@ export type ApiProject = {
   domain_verification_token?: string | null;
   pr_checks_enabled?: boolean;
   active_dast_enabled?: boolean;
+  browser_dast_enabled?: boolean;
   api_spec_url?: string | null;
   has_auth_configured?: boolean;
   asm_enabled?: boolean;
@@ -428,6 +429,7 @@ export async function createWebsiteProject(
     description?: string;
     ownership_confirmed: boolean;
     active_dast_enabled?: boolean;
+    browser_dast_enabled?: boolean;
     asm_enabled?: boolean;
     auth?: AuthConfig | null;
   },
@@ -458,7 +460,7 @@ export async function createApiProject(
 export async function updateProjectAuth(
   token: string,
   projectId: string,
-  data: { auth: AuthConfig; active_dast_enabled?: boolean | null; asm_enabled?: boolean | null },
+  data: { auth: AuthConfig; active_dast_enabled?: boolean | null; browser_dast_enabled?: boolean | null; asm_enabled?: boolean | null },
 ): Promise<ApiProject> {
   return apiFetch<ApiProject>(`/api/projects/${projectId}/auth`, token, {
     method: "PATCH",

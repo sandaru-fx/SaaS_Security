@@ -234,6 +234,9 @@ def _compute_risk_score(
     if issue.scanner in ("active-dast", "asm"):
         score += 8
         factors.append("internet_exposed")
+    elif issue.scanner == "browser-dast":
+        score += 10
+        factors.append("browser_verified")
     elif internet_exposed and issue.category in ("security", "secrets"):
         score += 4
         factors.append("live_target")
@@ -274,6 +277,8 @@ def _is_fix_now(score: int, issue: Issue, kev_listed: bool) -> bool:
     if issue.rule_id == "asm-subdomain-takeover":
         return True
     if issue.rule_id in ("graphql-introspection-enabled", "ws-origin-not-validated", "ws-message-injection"):
+        return True
+    if issue.rule_id == "browser-dom-xss":
         return True
     if score >= 75:
         return True

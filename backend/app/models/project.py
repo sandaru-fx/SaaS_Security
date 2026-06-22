@@ -36,6 +36,7 @@ class Project(Base):
     domain_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     pr_checks_enabled: Mapped[bool] = mapped_column(default=False)
     active_dast_enabled: Mapped[bool] = mapped_column(default=False)
+    browser_dast_enabled: Mapped[bool] = mapped_column(default=False)
     api_spec_url: Mapped[str] = mapped_column(String(500), nullable=True)
     auth_config: Mapped[str] = mapped_column(Text, nullable=True)
     asm_enabled: Mapped[bool] = mapped_column(default=False)

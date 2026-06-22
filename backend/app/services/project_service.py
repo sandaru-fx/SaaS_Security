@@ -287,6 +287,7 @@ async def create_website_project(
         domain_verified=False,
         status="processing",
         active_dast_enabled=bool(payload.active_dast_enabled),
+        browser_dast_enabled=bool(payload.browser_dast_enabled),
         asm_enabled=bool(payload.asm_enabled),
         asm_root_domain=_derive_asm_root(normalized_url) if payload.asm_enabled else None,
         auth_config=_serialize_auth(payload.auth),
@@ -412,6 +413,8 @@ async def update_project_auth(
     project.auth_config = _serialize_auth(payload.auth)
     if payload.active_dast_enabled is not None:
         project.active_dast_enabled = bool(payload.active_dast_enabled)
+    if payload.browser_dast_enabled is not None:
+        project.browser_dast_enabled = bool(payload.browser_dast_enabled)
     if payload.asm_enabled is not None:
         project.asm_enabled = bool(payload.asm_enabled)
         if project.asm_enabled and not project.asm_root_domain:

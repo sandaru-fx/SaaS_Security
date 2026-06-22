@@ -116,6 +116,11 @@ export function IssueCard({ issue, onSelect }: IssueCardProps) {
             WebSocket
           </span>
         )}
+        {issue.scanner === "browser-dast" && (
+          <span className="rounded border border-indigo-500/40 bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-300">
+            Browser DAST
+          </span>
+        )}
         {issue.validated === "inactive" && (
           <span
             className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-zinc-400"
