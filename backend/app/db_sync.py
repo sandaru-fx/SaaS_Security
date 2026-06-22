@@ -9,7 +9,10 @@ from app.config import get_settings
 @lru_cache
 def get_sync_engine():
     settings = get_settings()
-    return create_engine(settings.database_url, pool_pre_ping=True)
+    kwargs: dict = {"pool_pre_ping": True}
+    if not settings.is_sqlite:
+        kwargs["connect_args"] = {"connect_timeout": 15}
+    return create_engine(settings.sync_database_url, **kwargs)
 
 
 @lru_cache

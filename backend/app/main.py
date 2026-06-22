@@ -1,6 +1,10 @@
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,9 +41,23 @@ async def _schedule_worker() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await run_additive_migrations(conn)
+    if settings.is_sqlite:
+        from pathlib import Path
+
+        Path("data").mkdir(exist_ok=True)
+
+    logger.info("Connecting to database...")
+    try:
+        async with asyncio.timeout(30):
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await run_additive_migrations(conn)
+    except TimeoutError as exc:
+        logger.error(
+            "Database connection timed out. Check DATABASE_URL and that your Neon project is active."
+        )
+        raise RuntimeError("Database connection timed out") from exc
+    logger.info("Database ready")
     schedule_task = asyncio.create_task(_schedule_worker())
     yield
     schedule_task.cancel()

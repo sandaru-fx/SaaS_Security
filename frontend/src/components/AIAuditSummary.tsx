@@ -10,7 +10,7 @@ export function AIAuditSummary({ report }: AIAuditSummaryProps) {
 
   if (!hasContent) return null;
 
-  const isAI = report.ai_provider === "openai";
+  const isAI = report.ai_provider === "openai" || report.ai_provider === "gemini";
 
   return (
     <section className="mt-8 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/40 to-zinc-900/50 p-8">
