@@ -65,6 +65,14 @@ SaaS_2/
 - [x] Auto-migration for new columns (no Alembic needed)
 - [x] AI Auditor Assessment section in the report UI
 
+### Phase 7 — Architecture & Extended Scans
+- [x] Architecture heuristics (large files, deep folders, layering, circular deps)
+- [x] Performance patterns (N+1 queries, unbounded fetch, blocking in async)
+- [x] Code quality checks (TODO debt, long functions, debug statements)
+- [x] DevOps hygiene (.env in repo, CI/CD, Docker, .gitignore)
+- [x] All 5 audit categories now populated by dedicated scanners
+- [x] Extended category filters in scan results UI
+
 ## AI Auditor (Phase 6)
 
 The AI Auditor turns raw findings into executive-friendly narratives.

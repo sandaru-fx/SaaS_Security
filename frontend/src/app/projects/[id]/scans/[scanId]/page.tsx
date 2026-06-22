@@ -21,7 +21,16 @@ import {
 } from "@/lib/api";
 
 const severityFilters = ["all", "critical", "high", "medium", "low"] as const;
-const categoryFilters = ["all", "security", "secrets", "dependencies"] as const;
+const categoryFilters = [
+  "all",
+  "security",
+  "secrets",
+  "dependencies",
+  "architecture",
+  "performance",
+  "quality",
+  "devops",
+] as const;
 
 export default function ScanResultsPage() {
   const { getToken } = useAuth();
@@ -102,7 +111,7 @@ export default function ScanResultsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 6 — AI Auditor" />
+      <AppHeader badge="Phase 7 — Extended Scans" />
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <Link
