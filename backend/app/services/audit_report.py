@@ -23,6 +23,7 @@ from app.services.report_service import (
 
 
 def issue_to_response(issue: Issue) -> IssueResponse:
+    extra = issue.extra_data or {}
     return IssueResponse(
         id=issue.id,
         scan_id=issue.scan_id,
@@ -43,6 +44,8 @@ def issue_to_response(issue: Issue) -> IssueResponse:
         report_category=map_issue_category(issue.category),
         dismissed=bool(issue.dismissed),
         dismissed_reason=issue.dismissed_reason,
+        cwe_id=extra.get("cwe_id"),
+        owasp_category=extra.get("owasp_category"),
         created_at=issue.created_at,
     )
 

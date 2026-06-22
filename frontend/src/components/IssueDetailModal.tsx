@@ -32,6 +32,8 @@ export function IssueDetailModal({ issue, onClose, onDismiss }: IssueDetailModal
           <Badge label={issue.severity} />
           {issue.priority != null && <Badge label={`Priority ${issue.priority}`} />}
           {issue.report_category && <Badge label={issue.report_category} />}
+          {issue.cwe_id && <Badge label={issue.cwe_id} />}
+          {issue.owasp_category && <Badge label={issue.owasp_category} />}
           <Badge label={issue.scanner} />
         </div>
 

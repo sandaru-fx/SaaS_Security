@@ -45,8 +45,13 @@ def execute_scan(scan_id: str) -> None:
 
         if project.source_type == "website":
             from app.scanners.website_scanner import scan_website
+            from app.scanners.cwe_mappings import enrich_finding_tags
+            from app.scanners.dedup import deduplicate_findings
 
-            findings = scan_website(project.repo_url)
+            findings = [
+                enrich_finding_tags(f)
+                for f in deduplicate_findings(scan_website(project.repo_url))
+            ]
             scanners_used = ["website-security"]
         else:
             project_dir = _resolve_project_dir(project.storage_path)

@@ -79,6 +79,8 @@ export type ApiIssue = {
   report_category: string | null;
   dismissed: boolean;
   dismissed_reason: string | null;
+  cwe_id: string | null;
+  owasp_category: string | null;
   created_at: string;
 };
 

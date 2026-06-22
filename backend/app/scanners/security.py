@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from app.scanners.base import ScanFinding
+from app.scanners.cwe_mappings import enrich_finding_tags
 from app.scanners.secrets import SKIP_DIRS, TEXT_EXTENSIONS
 
 SECURITY_PATTERNS: list[tuple[str, str, str, str]] = [
@@ -71,19 +72,21 @@ def scan_security_patterns(project_dir: Path) -> list[ScanFinding]:
             for rule_id, pattern, severity, title in SECURITY_PATTERNS:
                 if re.search(pattern, line):
                     findings.append(
-                        ScanFinding(
-                            category="security",
-                            severity=severity,
-                            title=title,
-                            description=f"Security pattern `{rule_id}` matched in `{rel_path}` line {line_no}.",
-                            impact=_impact_for_rule(rule_id),
-                            fix_recommendation=_fix_for_rule(rule_id),
-                            file_path=rel_path,
-                            line_start=line_no,
-                            line_end=line_no,
-                            rule_id=rule_id,
-                            scanner="security-patterns",
-                            confidence="medium",
+                        enrich_finding_tags(
+                            ScanFinding(
+                                category="security",
+                                severity=severity,
+                                title=title,
+                                description=f"Security pattern `{rule_id}` matched in `{rel_path}` line {line_no}.",
+                                impact=_impact_for_rule(rule_id),
+                                fix_recommendation=_fix_for_rule(rule_id),
+                                file_path=rel_path,
+                                line_start=line_no,
+                                line_end=line_no,
+                                rule_id=rule_id,
+                                scanner="security-patterns",
+                                confidence="medium",
+                            )
                         )
                     )
 
