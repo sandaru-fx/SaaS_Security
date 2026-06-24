@@ -21,6 +21,8 @@ class SubscriptionResponse(BaseModel):
     scans_used: int
     scan_limit: int | None
     scans_remaining: int | None
+    max_upload_size_mb: int
+    max_zip_files: int
     features: PlanFeatures
     billing_period_start: datetime | None
     has_active_subscription: bool

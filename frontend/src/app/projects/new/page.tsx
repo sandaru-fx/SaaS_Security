@@ -15,6 +15,7 @@ import {
   createLocalProject,
   createWebsiteProject,
   getApiFeatures,
+  getSubscription,
   uploadFolderProject,
   uploadZipProject,
 } from "@/lib/api";
@@ -27,6 +28,7 @@ export default function NewProjectPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localPathsEnabled, setLocalPathsEnabled] = useState(false);
+  const [maxUploadMb, setMaxUploadMb] = useState(100);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -66,7 +68,16 @@ export default function NewProjectPage() {
     getApiFeatures().then((features) => {
       setLocalPathsEnabled(features.local_project_paths);
     });
-  }, []);
+    getToken().then(async (token) => {
+      if (!token) return;
+      try {
+        const subscription = await getSubscription(token);
+        setMaxUploadMb(subscription.max_upload_size_mb);
+      } catch {
+        // keep default upload hint for free tier
+      }
+    });
+  }, [getToken]);
 
   function buildAuthConfig(): AuthConfig | null {
     if (authType === "none") return null;
@@ -305,7 +316,7 @@ export default function NewProjectPage() {
               <p className="mt-2 text-xs text-zinc-500">
                 Pick any folder on your PC — like opening a project in VS Code. Skips{" "}
                 <code className="text-zinc-400">node_modules</code> and{" "}
-                <code className="text-zinc-400">.git</code> automatically. Max 50MB total.
+                <code className="text-zinc-400">.git</code> automatically. Max {maxUploadMb}MB total.
               </p>
             </Field>
           ) : tab === "local" ? (
@@ -678,7 +689,7 @@ export default function NewProjectPage() {
                 onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
                 className="w-full text-sm text-zinc-400 file:mr-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-zinc-950"
               />
-              <p className="mt-2 text-xs text-zinc-500">Maximum file size: 50MB</p>
+              <p className="mt-2 text-xs text-zinc-500">Maximum file size: {maxUploadMb}MB</p>
             </Field>
           )}
 

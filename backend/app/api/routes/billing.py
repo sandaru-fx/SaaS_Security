@@ -42,6 +42,9 @@ async def get_pricing() -> PricingResponse:
             features.append("Private repo support")
         if plan_id == "team":
             features.append("Up to 5 team members")
+        upload_mb, max_files = subscription_service.upload_limits_for_plan(plan_id)
+        features.append(f"Up to {upload_mb}MB project uploads")
+        features.append(f"Up to {max_files:,} files per upload")
 
         plans.append(
             PricingPlan(
@@ -69,6 +72,8 @@ async def get_subscription(
         scans_used=info["scans_used"],
         scan_limit=info["scan_limit"],
         scans_remaining=info["scans_remaining"],
+        max_upload_size_mb=info["max_upload_size_mb"],
+        max_zip_files=info["max_zip_files"],
         features=PlanFeatures(**info["features"]),
         billing_period_start=info["billing_period_start"],
         has_active_subscription=info["has_active_subscription"],

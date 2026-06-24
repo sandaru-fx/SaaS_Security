@@ -273,6 +273,8 @@ export type SubscriptionInfo = {
   scans_used: number;
   scan_limit: number | null;
   scans_remaining: number | null;
+  max_upload_size_mb: number;
+  max_zip_files: number;
   features: PlanFeatures;
   billing_period_start: string | null;
   has_active_subscription: boolean;

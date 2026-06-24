@@ -26,7 +26,7 @@ from app.schemas.project import (
 from app.scanners.website_scanner import normalize_website_url, validate_website_url
 from app.services.github import build_github_headers, build_github_zipball_url, parse_github_url
 from app.services.domain_verification import generate_verification_token
-from app.services.subscription_service import has_feature
+from app.services.subscription_service import has_feature, upload_limits_for_user
 from app.services.storage import (
     count_project_files,
     delete_project_dir,
@@ -109,9 +109,10 @@ async def create_zip_project(
         raise ValueError("Only .zip files are supported")
 
     content = await upload.read()
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    max_upload_mb, max_zip_files = upload_limits_for_user(user)
+    max_bytes = max_upload_mb * 1024 * 1024
     if len(content) > max_bytes:
-        raise ValueError(f"File too large. Maximum size is {settings.max_upload_size_mb}MB")
+        raise ValueError(f"File too large. Maximum size is {max_upload_mb}MB")
 
     project = Project(
         user_id=user.id,
@@ -132,7 +133,7 @@ async def create_zip_project(
             tmp.write(content)
             tmp_path = Path(tmp.name)
         try:
-            safe_extract_zip(tmp_path, project_dir)
+            safe_extract_zip(tmp_path, project_dir, max_files=max_zip_files)
             flatten_single_root_folder(project_dir)
             project.file_count = count_project_files(project_dir)
             project.status = "ready"
@@ -159,7 +160,8 @@ async def create_folder_project(
     if not uploads:
         raise ValueError("No files selected. Choose a project folder to upload.")
 
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    max_upload_mb, max_zip_files = upload_limits_for_user(user)
+    max_bytes = max_upload_mb * 1024 * 1024
     total_bytes = 0
     file_payloads: list[tuple[str, bytes]] = []
 
@@ -170,11 +172,11 @@ async def create_folder_project(
         content = await upload.read()
         total_bytes += len(content)
         if total_bytes > max_bytes:
-            raise ValueError(f"Folder too large. Maximum size is {settings.max_upload_size_mb}MB")
+            raise ValueError(f"Folder too large. Maximum size is {max_upload_mb}MB")
         file_payloads.append((relative_path, content))
 
-    if len(file_payloads) > settings.max_zip_files:
-        raise ValueError(f"Too many files (max {settings.max_zip_files})")
+    if len(file_payloads) > max_zip_files:
+        raise ValueError(f"Too many files (max {max_zip_files})")
 
     project = Project(
         user_id=user.id,
