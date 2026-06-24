@@ -51,7 +51,10 @@ services:
       CLERK_JWKS_URL: ${CLERK_JWKS_URL:-}
       CLERK_JWT_ISSUER: ${CLERK_JWT_ISSUER:-}
       UPLOAD_DIR: uploads
-      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-150}
+      MAX_ZIP_FILES: ${MAX_ZIP_FILES:-10000}
+      FREE_MAX_UPLOAD_SIZE_MB: ${FREE_MAX_UPLOAD_SIZE_MB:-100}
+      FREE_MAX_ZIP_FILES: ${FREE_MAX_ZIP_FILES:-8000}
     depends_on:
       postgres:
         condition: service_healthy

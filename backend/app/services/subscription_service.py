@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from app.config import get_settings
 from app.models.user import User
 
 PLAN_LIMITS: dict[str, dict] = {
     "free": {
         "label": "Free",
-        "scan_limit": 2,
+        "scan_limit": 8,
         "pdf_export": False,
         "sbom_export": False,
         "deep_audit": False,
@@ -45,6 +46,17 @@ def normalize_plan(plan: str | None) -> str:
 
 def get_plan_config(plan: str | None) -> dict:
     return PLAN_LIMITS[normalize_plan(plan)]
+
+
+def upload_limits_for_plan(plan: str | None) -> tuple[int, int]:
+    settings = get_settings()
+    if normalize_plan(plan) == "free":
+        return settings.free_max_upload_size_mb, settings.free_max_zip_files
+    return settings.max_upload_size_mb, settings.max_zip_files
+
+
+def upload_limits_for_user(user: User) -> tuple[int, int]:
+    return upload_limits_for_plan(user.plan)
 
 
 def reset_billing_period_if_needed(user: User) -> None:
@@ -100,6 +112,7 @@ def build_subscription_info(user: User) -> dict:
     reset_billing_period_if_needed(user)
     limit = config["scan_limit"]
     remaining = scans_remaining(user)
+    max_upload_mb, max_zip_files = upload_limits_for_user(user)
 
     return {
         "plan": normalize_plan(user.plan),
@@ -108,6 +121,8 @@ def build_subscription_info(user: User) -> dict:
         "scans_used": user.scans_used_this_period,
         "scan_limit": limit,
         "scans_remaining": remaining,
+        "max_upload_size_mb": max_upload_mb,
+        "max_zip_files": max_zip_files,
         "features": {
             "pdf_export": config["pdf_export"],
             "sbom_export": config.get("sbom_export", False),

@@ -35,14 +35,20 @@ def count_project_files(project_dir: Path) -> int:
     return sum(1 for item in project_dir.rglob("*") if item.is_file())
 
 
-def safe_extract_zip(zip_path: Path, dest_dir: Path) -> None:
+def safe_extract_zip(
+    zip_path: Path,
+    dest_dir: Path,
+    *,
+    max_files: int | None = None,
+) -> None:
     """Extract zip with zip-slip protection."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_resolved = dest_dir.resolve()
+    file_limit = max_files if max_files is not None else settings.max_zip_files
 
     with zipfile.ZipFile(zip_path, "r") as archive:
-        if len(archive.namelist()) > settings.max_zip_files:
-            raise ValueError(f"ZIP contains too many files (max {settings.max_zip_files})")
+        if len(archive.namelist()) > file_limit:
+            raise ValueError(f"ZIP contains too many files (max {file_limit})")
 
         for member in archive.namelist():
             if member.endswith("/"):

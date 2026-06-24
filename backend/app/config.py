@@ -54,8 +54,10 @@ class Settings(BaseSettings):
     zap_timeout_seconds: int = 600
 
     upload_dir: str = "uploads"
-    max_upload_size_mb: int = 50
-    max_zip_files: int = 5000
+    max_upload_size_mb: int = 150
+    max_zip_files: int = 10000
+    free_max_upload_size_mb: int = 100
+    free_max_zip_files: int = 8000
     allow_local_project_paths: bool = False
     local_projects_root: str = ""
 
