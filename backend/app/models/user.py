@@ -29,6 +29,9 @@ class User(Base):
         nullable=True,
     )
     email_alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    slack_webhook_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    slack_alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     github_pat: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

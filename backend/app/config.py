@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     allow_local_project_paths: bool = False
     local_projects_root: str = ""
 
+    storage_backend: str = "local"
+    s3_bucket: str = ""
+    s3_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+
+    sentry_dsn: str = ""
+
     @property
     def local_paths_enabled(self) -> bool:
         return self.allow_local_project_paths or self.environment == "development"

@@ -27,6 +27,7 @@ from app.scanners.website_scanner import normalize_website_url, validate_website
 from app.services.github import build_github_headers, build_github_zipball_url, parse_github_url
 from app.services.domain_verification import generate_verification_token
 from app.services.subscription_service import has_feature, upload_limits_for_user
+from app.services.object_storage import finalize_project_storage, remove_project_storage
 from app.services.storage import (
     count_project_files,
     delete_project_dir,
@@ -79,7 +80,6 @@ async def create_github_project(
     await db.refresh(project)
 
     project_dir = ensure_project_dir(str(user.id), str(project.id))
-    project.storage_path = f"{settings.upload_dir}/{user.id}/{project.id}"
 
     try:
         token = user.github_pat if has_feature(user, "private_repos") else None
@@ -88,6 +88,7 @@ async def create_github_project(
         project.file_count = count_project_files(project_dir)
         project.status = "ready"
         project.status_message = f"Cloned {project.file_count} files from {normalized_url}"
+        project.storage_path = finalize_project_storage(str(user.id), str(project.id), project_dir)
     except Exception as exc:
         project.status = "failed"
         project.status_message = str(exc)
@@ -126,7 +127,6 @@ async def create_zip_project(
     await db.refresh(project)
 
     project_dir = ensure_project_dir(str(user.id), str(project.id))
-    project.storage_path = str(Path(settings.upload_dir) / str(user.id) / str(project.id))
 
     try:
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
@@ -138,6 +138,7 @@ async def create_zip_project(
             project.file_count = count_project_files(project_dir)
             project.status = "ready"
             project.status_message = f"Extracted {project.file_count} files from upload"
+            project.storage_path = finalize_project_storage(str(user.id), str(project.id), project_dir)
         finally:
             tmp_path.unlink(missing_ok=True)
     except Exception as exc:
@@ -190,7 +191,6 @@ async def create_folder_project(
     await db.refresh(project)
 
     project_dir = ensure_project_dir(str(user.id), str(project.id))
-    project.storage_path = str(Path(settings.upload_dir) / str(user.id) / str(project.id))
 
     try:
         saved = save_uploaded_files(file_payloads, project_dir)
@@ -200,6 +200,7 @@ async def create_folder_project(
             raise ValueError("No scannable files found in the selected folder")
         project.status = "ready"
         project.status_message = f"Uploaded {project.file_count} files from local folder ({saved} saved)"
+        project.storage_path = finalize_project_storage(str(user.id), str(project.id), project_dir)
     except Exception as exc:
         project.status = "failed"
         project.status_message = str(exc)
@@ -560,7 +561,7 @@ async def delete_project(db: AsyncSession, user: User, project: Project) -> None
     if project.source_type in ("website", "local", "api", "cloud"):
         pass
     else:
-        delete_project_dir(str(user.id), str(project.id))
+        remove_project_storage(str(user.id), str(project.id), project.storage_path)
     await db.delete(project)
     await db.commit()
 

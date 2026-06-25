@@ -208,12 +208,13 @@ def execute_scan(scan_id: str) -> None:
         scan.completed_at = datetime.now(timezone.utc)
         session.commit()
 
-        from app.services.notification_service import send_critical_alert
+        from app.services.notification_service import send_critical_alert, send_scan_slack_alert
         from app.services.webhook_service import notify_scan_complete
 
         notify_scan_complete(scan, project)
         if user:
             send_critical_alert(user, scan, project.name)
+            send_scan_slack_alert(user, scan, project.name)
 
         logger.info("Scan %s completed with %d issues", scan_id, scan.total_issues)
 
@@ -309,18 +310,6 @@ def _recount_severities(scan: Scan, issues: list[Issue]) -> None:
 
 
 def _resolve_project_dir(storage_path: str) -> Path:
-    settings = get_settings()
-    path = Path(storage_path)
-    if path.is_absolute():
-        return path
+    from app.services.object_storage import resolve_project_dir
 
-    candidates = [
-        Path.cwd() / path,
-        Path("/app") / path,
-        Path("/backend") / path,
-        Path(settings.upload_dir).parent / path if settings.upload_dir else Path.cwd() / path,
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return Path.cwd() / path
+    return resolve_project_dir(storage_path)

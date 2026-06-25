@@ -21,7 +21,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 9 — Launch" />
+      <AppHeader badge="Production Ready" />
 
       <main>
         <section className="mx-auto max-w-6xl px-6 py-20">
@@ -52,7 +52,7 @@ export default async function Home() {
                 href="/sign-up"
                 className="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
               >
-                Start Free — 2 Audits/Month
+                Start Free — 8 Audits/Month
               </Link>
             </Show>
             <Link
@@ -72,20 +72,36 @@ export default async function Home() {
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  title: "Security Audit",
-                  desc: "Secrets, vulnerabilities, SQLi, XSS patterns",
+                  title: "30+ Security Scanners",
+                  desc: "SAST, secrets, deps, DAST, CSPM, LLM risks, supply chain",
                 },
                 {
-                  title: "Architecture Review",
-                  desc: "Large files, layering issues, circular deps",
+                  title: "Risk Prioritization",
+                  desc: "EPSS, KEV, and weighted scores — fix what matters first",
                 },
                 {
                   title: "Health Score",
-                  desc: "0–100 score with category breakdown",
+                  desc: "0–100 score with Security, Architecture, DevOps breakdown",
                 },
                 {
                   title: "AI Auditor",
-                  desc: "Business-language executive summaries",
+                  desc: "Executive summaries in Problem → Impact → Fix format",
+                },
+                {
+                  title: "GitHub & Auto-Fix",
+                  desc: "Connect repos, PR status checks, safe remediation PRs",
+                },
+                {
+                  title: "Cloud CSPM",
+                  desc: "AWS, Azure, and GCP misconfiguration scanning",
+                },
+                {
+                  title: "Website DAST",
+                  desc: "Active scans, browser testing, optional OWASP ZAP",
+                },
+                {
+                  title: "Teams & API",
+                  desc: "Organizations, API keys, webhooks, scheduled audits",
                 },
               ].map((item) => (
                 <div

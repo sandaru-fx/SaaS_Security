@@ -28,6 +28,9 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
     ("users", "scans_used_this_period", "INTEGER"),
     ("users", "billing_period_start", "TIMESTAMP WITH TIME ZONE"),
     ("users", "email_alerts_enabled", "BOOLEAN"),
+    ("users", "onboarding_completed", "BOOLEAN"),
+    ("users", "slack_webhook_url", "VARCHAR(500)"),
+    ("users", "slack_alerts_enabled", "BOOLEAN"),
     ("issues", "dismissed", "BOOLEAN"),
     ("issues", "dismissed_reason", "TEXT"),
     ("issues", "dismissed_at", "TIMESTAMP WITH TIME ZONE"),
@@ -51,6 +54,8 @@ ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
 
 SQLITE_COLUMN_DEFAULTS: dict[tuple[str, str], str] = {
     ("users", "email_alerts_enabled"): "DEFAULT 1",
+    ("users", "onboarding_completed"): "DEFAULT 0",
+    ("users", "slack_alerts_enabled"): "DEFAULT 0",
     ("projects", "domain_verified"): "DEFAULT 0",
     ("projects", "pr_checks_enabled"): "DEFAULT 0",
     ("projects", "active_dast_enabled"): "DEFAULT 0",
