@@ -21,8 +21,20 @@ from app.models import scan as scan_model  # noqa: F401
 from app.models import user as user_model  # noqa: F401
 from app.services.schedule_service import process_due_schedules
 
-settings = get_settings()
 logger = logging.getLogger(__name__)
+settings = get_settings()
+
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.environment,
+            traces_sample_rate=0.1,
+        )
+    except Exception as exc:
+        logger.warning("Sentry init failed: %s", exc)
 
 
 async def _schedule_worker() -> None:

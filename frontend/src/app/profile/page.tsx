@@ -5,7 +5,7 @@ import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { ApiUser, getCurrentUser, updateCurrentUser } from "@/lib/api";
+import { ApiUser, getCurrentUser, updateCurrentUser, updateNotificationSettings } from "@/lib/api";
 
 export default function ProfilePage() {
   const { getToken } = useAuth();
@@ -17,6 +17,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [slackAlerts, setSlackAlerts] = useState(false);
+  const [slackWebhook, setSlackWebhook] = useState("");
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -27,6 +31,9 @@ export default function ProfilePage() {
         setApiUser(data);
         setFirstName(data.first_name ?? user?.firstName ?? "");
         setLastName(data.last_name ?? user?.lastName ?? "");
+        setEmailAlerts(data.email_alerts_enabled ?? true);
+        setSlackAlerts(data.slack_alerts_enabled ?? false);
+        setSlackWebhook(data.slack_webhook_configured ? "••••••••" : "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
@@ -56,6 +63,36 @@ export default function ProfilePage() {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleNotificationsSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSavingNotifications(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+      const payload: {
+        email_alerts_enabled: boolean;
+        slack_alerts_enabled: boolean;
+        slack_webhook_url?: string | null;
+      } = {
+        email_alerts_enabled: emailAlerts,
+        slack_alerts_enabled: slackAlerts,
+      };
+      if (slackWebhook && !slackWebhook.startsWith("••")) {
+        payload.slack_webhook_url = slackWebhook;
+      }
+      const updated = await updateNotificationSettings(token, payload);
+      setApiUser(updated);
+      setSlackWebhook(updated.slack_webhook_configured ? "••••••••" : "");
+      setMessage("Notification settings saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save notifications");
+    } finally {
+      setSavingNotifications(false);
     }
   }
 
@@ -130,6 +167,50 @@ export default function ProfilePage() {
               </form>
             </>
           )}
+        </div>
+
+        <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+          <h2 className="text-lg font-semibold">Notifications</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Email alerts for critical findings (requires SMTP on server). Slack alerts on every completed audit.
+          </p>
+          <form onSubmit={handleNotificationsSubmit} className="mt-4 space-y-4">
+            <label className="flex items-center gap-3 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={emailAlerts}
+                onChange={(e) => setEmailAlerts(e.target.checked)}
+                className="rounded border-zinc-600"
+              />
+              Email me when critical issues are found
+            </label>
+            <label className="flex items-center gap-3 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={slackAlerts}
+                onChange={(e) => setSlackAlerts(e.target.checked)}
+                className="rounded border-zinc-600"
+              />
+              Send Slack message when an audit completes
+            </label>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-400">Slack Incoming Webhook URL</label>
+              <input
+                type="url"
+                value={slackWebhook}
+                onChange={(e) => setSlackWebhook(e.target.value)}
+                placeholder="https://hooks.slack.com/services/..."
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-zinc-50 outline-none focus:border-emerald-500"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingNotifications}
+              className="rounded-lg border border-zinc-700 px-5 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500 disabled:opacity-50"
+            >
+              {savingNotifications ? "Saving…" : "Save notifications"}
+            </button>
+          </form>
         </div>
       </main>
     </div>

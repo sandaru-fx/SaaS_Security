@@ -12,6 +12,10 @@ class UserResponse(BaseModel):
     last_name: str | None
     avatar_url: str | None
     github_pat_configured: bool = False
+    onboarding_completed: bool = False
+    email_alerts_enabled: bool = True
+    slack_alerts_enabled: bool = False
+    slack_webhook_configured: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -25,3 +29,13 @@ class UserUpdate(BaseModel):
 
 class GithubPatUpdate(BaseModel):
     github_pat: str | None = Field(default=None, max_length=500)
+
+
+class NotificationSettingsUpdate(BaseModel):
+    email_alerts_enabled: bool | None = None
+    slack_alerts_enabled: bool | None = None
+    slack_webhook_url: str | None = Field(default=None, max_length=500)
+
+
+class OnboardingCompleteUpdate(BaseModel):
+    completed: bool = True

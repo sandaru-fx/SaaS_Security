@@ -55,6 +55,12 @@ services:
       MAX_ZIP_FILES: ${MAX_ZIP_FILES:-10000}
       FREE_MAX_UPLOAD_SIZE_MB: ${FREE_MAX_UPLOAD_SIZE_MB:-100}
       FREE_MAX_ZIP_FILES: ${FREE_MAX_ZIP_FILES:-8000}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       postgres:
         condition: service_healthy

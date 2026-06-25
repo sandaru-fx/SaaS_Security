@@ -84,7 +84,7 @@ SaaS_2/
 
 ### Phase 9 — Monetization & Pro Features
 - [x] Subscription plans (Free / Pro / Team) with usage limits
-- [x] Free plan: 2 audits/month; Pro/Team: unlimited
+- [x] Free plan: 8 audits/month, 100MB uploads; Pro/Team: unlimited + higher caps
 - [x] Stripe checkout, billing portal, and webhook integration
 - [x] PDF audit report export (Pro feature)
 - [x] AI Deep Audit gated to Pro/Team plans
@@ -115,7 +115,56 @@ SaaS_2/
 - [x] False positive management — dismiss issues
 - [x] Enterprise settings UI + GitHub Actions workflow example
 
-## AI Auditor (Phase 6)
+### Phase 11 — Advanced App Security
+- [x] API/OpenAPI security scanner
+- [x] Infrastructure-as-Code (Terraform, CloudFormation) scanning
+- [x] Git history secrets scan
+- [x] Bandit, crypto weakness, reachability analysis
+
+### Phase 12 — Risk Scoring & Prioritization
+- [x] EPSS + KEV exploit signals
+- [x] Weighted 0–100 risk scores per issue
+- [x] Top Fix Now panel and sorted issue list
+
+### Phase 13 — GraphQL & WebSocket Security
+- [x] GraphQL static analysis (introspection, depth, batching)
+- [x] WebSocket security patterns
+
+### Phase 14 — Browser DAST
+- [x] Playwright-based browser DAST for authenticated flows
+
+### Phase 15 — Cloud CSPM
+- [x] AWS, Azure, and GCP misconfiguration scanners
+
+### Phase 16 — Supply Chain Security
+- [x] Typosquatting, Sigstore/SLSA signals, malicious package checks
+
+### Phase 17 — AI/LLM Security
+- [x] Prompt injection, LangChain risks, OWASP LLM Top 10 patterns
+
+### Phase 18 — Auto-Fix PRs
+- [x] Safe deterministic GitHub remediation pull requests
+
+### Phase 19 — OWASP ZAP DAST
+- [x] Optional ZAP baseline integration for website scans
+
+### Phase 20 — Teams & CI Integration
+- [x] Organization UI, member limits
+- [x] GitHub PR status checks on audit completion
+
+### Phase 21 — Launch Readiness
+- [x] S3-compatible upload storage (optional `STORAGE_BACKEND=s3`)
+- [x] First-login onboarding wizard
+- [x] Slack audit-completion alerts (Profile → Notifications)
+- [x] GitHub Actions CI (backend tests + frontend build)
+- [x] Sentry error tracking (optional `SENTRY_DSN`)
+- [x] Production deploy guide (`DEPLOY.md`)
+
+## Production Deploy
+
+See **[DEPLOY.md](./DEPLOY.md)** for Render + Vercel + Neon + S3 setup.
+
+## Stripe Setup (Phase 9)
 
 The AI Auditor turns raw findings into executive-friendly narratives.
 
@@ -231,7 +280,7 @@ The provider used is shown in the report ("AI-powered" vs "Rule-based").
 | `/sign-in` | Public | Clerk sign in |
 | `/sign-up` | Public | Clerk sign up |
 | `/dashboard` | Protected | User dashboard |
-| `/profile` | Protected | Profile settings |
+| `/profile` | Protected | Profile + Slack/email notifications |
 | `/projects` | Protected | Project list |
 | `/projects/new` | Protected | Create project |
 | `/projects/[id]` | Protected | Project details + start audit |
@@ -241,16 +290,11 @@ The provider used is shown in the report ("AI-powered" vs "Rule-based").
 
 | Phase | Focus | Status |
 |---|---|---|
-| 01 | Foundation | ✅ Done |
-| 02 | Auth & Users | ✅ Done |
-| 03 | Projects & Repo | ✅ Done |
-| 04 | Scan Engine | ✅ Done |
-| 05 | Report & Score | ✅ Done |
-| 06 | AI Layer | Pending |
-| 07 | Extended Scans | Pending |
-| 08 | Dashboard | Pending |
-| 09 | Monetization | Pending |
-| 10 | Enterprise | Pending |
+| 01–05 | Foundation → Reports | ✅ Done |
+| 06–10 | AI, Extended Scans, Dashboard, Billing, Enterprise | ✅ Done |
+| 11–15 | API/IaC, Risk Scoring, GraphQL/WS, Browser DAST, CSPM | ✅ Done |
+| 16–20 | Supply Chain, LLM, Auto-Fix, ZAP, Teams/CI | ✅ Done |
+| 21 | Launch readiness (S3, onboarding, Slack, CI, deploy) | ✅ Done |
 
 ## Git Branching
 

@@ -43,6 +43,18 @@ services:
         sync: false
       - key: GITHUB_WEBHOOK_SECRET
         sync: false
+      - key: STORAGE_BACKEND
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
     # Persistent uploads need a paid Render plan:
     # disk:
     #   name: auditor-uploads

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActiveScanBanner } from "@/components/ActiveScanBanner";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { ProjectCard } from "@/components/ProjectCard";
 import { RecentScansList } from "@/components/RecentScansList";
 import { ScoreTrendChart } from "@/components/ScoreTrendChart";
@@ -28,6 +29,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     const token = await getToken();
@@ -45,6 +48,8 @@ export default function DashboardPage() {
     setApiUser(userData);
     setProjects(projectData.projects.slice(0, 3));
     setDashboard(dashboardData);
+    setAuthToken(token);
+    setShowOnboarding(!userData.onboarding_completed && projectData.total === 0);
     setError(null);
     return dashboardData;
   }, [getToken]);
@@ -108,7 +113,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <AppHeader badge="Phase 8 — Dashboard" />
+      <AppHeader badge="Dashboard" />
 
       <main className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -125,6 +130,13 @@ export default function DashboardPage() {
             + New Project
           </Link>
         </div>
+
+        {showOnboarding && authToken && (
+          <OnboardingWizard
+            token={authToken}
+            onComplete={() => setShowOnboarding(false)}
+          />
+        )}
 
         {notification && (
           <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-950/30 px-4 py-3">

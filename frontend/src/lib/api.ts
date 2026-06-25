@@ -7,6 +7,10 @@ export type ApiUser = {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
+  onboarding_completed?: boolean;
+  email_alerts_enabled?: boolean;
+  slack_alerts_enabled?: boolean;
+  slack_webhook_configured?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -345,6 +349,27 @@ export async function updateCurrentUser(
   return apiFetch<ApiUser>("/api/users/me", token, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateNotificationSettings(
+  token: string,
+  data: {
+    email_alerts_enabled?: boolean;
+    slack_alerts_enabled?: boolean;
+    slack_webhook_url?: string | null;
+  },
+): Promise<ApiUser> {
+  return apiFetch<ApiUser>("/api/users/me/notifications", token, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function completeOnboarding(token: string): Promise<ApiUser> {
+  return apiFetch<ApiUser>("/api/users/me/onboarding", token, {
+    method: "PATCH",
+    body: JSON.stringify({ completed: true }),
   });
 }
 
